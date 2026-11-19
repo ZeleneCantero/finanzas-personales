@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reparando Finanzas 🐳</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff7fb;color:#1f2937;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px}
+  .box{max-width:420px}
+  h1{color:#be185d;font-size:20px}
+  p{font-size:14px;line-height:1.5;color:#6b7280}
+  a{color:#be185d}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🐳 Actualizando Finanzas…</h1>
+  <p id="msg">Limpiando la versión guardada en este dispositivo.</p>
+  <p id="manual" style="display:none">Si no abre solo, toca <a href="./">aquí</a>.</p>
+</div>
+<script>
+const DEST = "./?setup=eyJib3RVcmwiOiJodHRwczovL2ZpbmFuemFzLXRlbGVncmFtLWJvdC56ZWxlbmUud29ya2Vycy5kZXYiLCJib3RUb2tlbiI6ImNjNmQxN2Q5ODU1Y2NjNWY1ZmMwMjE4ZGUxZWQwNTZiZDE0ZTQ2NWRhMWE5OWYxYmE1MWFiNGE2MTEyNTk0MGUifQ==";
+(async function(){
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister().catch(function(){})));
+    }
+  } catch (e) {}
+  try {
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k).catch(function(){})));
+    }
+  } catch (e) {}
+  document.getElementById("msg").textContent = "Listo. Abriendo la versión nueva…";
+  document.getElementById("manual").style.display = "block";
+  setTimeout(function(){ location.replace(DEST); }, 600);
+})();
+</script>
+</body>
+</html>
