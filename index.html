@@ -58,7 +58,7 @@
   .btn{padding:8px 14px;border-radius:10px;font-weight:600;font-size:13px;background:var(--pink);color:#fff;transition:transform .1s}
   .btn:active{transform:scale(.97)}
   .btn-ghost{background:var(--pink-light);color:var(--pink-dark)}
-  .btn-sm{padding:4px 10px;font-size:12px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  .btn.btn-sm{padding:4px 10px;font-size:12px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
   .btn-danger{background:#fee2e2;color:#991b1b}
   input,select,textarea{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:inherit;background:#fff}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pink)}
@@ -173,7 +173,7 @@
   body.dark .chatmsg .txt{background:#0f172a;color:#e5e7eb}
   body.dark .bottomnav{background:#16213e;border-color:#334155}
   body.dark .card{box-shadow:0 6px 20px rgba(0,0,0,.24)}
-  body.compact .btn-sm{min-height:38px}
+  body.compact .btn.btn-sm{min-height:38px}
 </style>
 </head>
 <body>
@@ -2368,7 +2368,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=14").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=15").catch(()=>{}); }
 </script>
 </body>
 </html>
