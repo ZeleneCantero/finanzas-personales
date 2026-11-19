@@ -1183,10 +1183,10 @@ function pdfMama(){
 }
 
 // bot sync
-function setBotUrl(v){ state.config.botUrl=v; saveState(); }
-function setBotToken(v){ state.config.botToken=v; saveState(); }
+function setBotUrl(v){ state.config.botUrl=(v||"").trim().replace(/\/+$/,""); saveState(); }
+function setBotToken(v){ state.config.botToken=(v||"").trim(); saveState(); }
 async function syncToBot(){
-  const url=state.config.botUrl; const token=state.config.botToken;
+  const url=(state.config.botUrl||"").trim(); const token=(state.config.botToken||"").trim();
   if(!url||!token){ toast("Falta URL o token"); return; }
   const m=currentMonth();
   const summary=buildResumenTexto(m);
@@ -1196,7 +1196,7 @@ async function syncToBot(){
   }catch(e){ toast("Error de red"); }
 }
 async function importFromBot(){
-  const url=state.config.botUrl; const token=state.config.botToken;
+  const url=(state.config.botUrl||"").trim(); const token=(state.config.botToken||"").trim();
   if(!url||!token){ toast("Falta URL o token"); return; }
   try{
     const r=await fetch(url+"/api/ledger",{headers:{"X-Auth-Token":token}});
