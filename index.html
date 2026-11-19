@@ -231,6 +231,7 @@
           <button class="btn btn-ghost btn-sm" id="chipDebo" onclick="setMamaFilter('debo')">🔴 Debo</button>
           <button class="btn btn-ghost btn-sm" id="chipMeDeben" onclick="setMamaFilter('me_deben')">🟢 Me deben</button>
         </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">El chip <b>Debro</b> incluye iPhone y tele; en Gasto variable se cuentan solo los movimientos.</div>
         <div id="mamaDebtList"></div>
         <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span id="mamaDebtLbl">Total que debo</span><span id="mamaDebtTotal">$0</span></div>
       </div>
@@ -239,14 +240,15 @@
         <div class="grid2" style="margin-bottom:8px">
           <div class="stat" style="padding:8px">
             <div class="v" id="varDeudaMama" style="font-size:17px">$0</div>
-            <div class="l">🔴 Deuda total con mamá</div>
-            <div id="varNetoMama" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+            <div class="l">🔴 Lo que le debo a mamá</div>
+            <div id="varNetoMama" style="font-size:11px;color:var(--muted);margin-top:2px">Sin iPhone, tele ni apoyo</div>
           </div>
           <div class="stat" style="padding:8px">
             <div class="v" id="varGastoPersonal" style="font-size:17px">$0</div>
             <div class="l">🙋 Lo que he gastado (personal)</div>
           </div>
         </div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px;margin-top:4px"><span>Total gasto variable</span><span id="varTotal">$0</span></div>
         <div id="gastoBars"></div>
         <div class="grid2" style="margin-top:8px">
           <div><div style="font-size:11px;color:var(--muted)">Presupuesto con mamá</div><input id="budMama" type="number" style="width:100%" onchange="setBudget('mama',this.value)"></div>
@@ -516,7 +518,7 @@ function loadState(){
     const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){ const s=JSON.parse(raw); if(s && s.months) return s; }
   }catch(e){}
-  return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:376801.24,deudaFilter:"pendientes"}, user:{name:"Yosseline"} };
+  return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:505115.66,deudaFilter:"pendientes"}, user:{name:"Yosseline"} };
 }
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
@@ -562,8 +564,16 @@ function fijosTotal(m){
   const deuda=m.deudaMama.reduce((s,x)=>s+x.monto,0);
   return msi+deuda+(m.apoyo||0);
 }
-// Los movimientos de Telegram (tgId) son deudas, NO gasto variable: se excluyen de las sumas.
+// Gasto real (lo que ella gasta), sin las deudas importadas de Telegram.
 function gastoTotal(m,who){ return m.gasto[who].items.filter(x=>!x.tgId).reduce((s,x)=>s+x.monto, 0); }
+// Lo que le debe a mamá: solo movimientos, SIN iPhone, tele ni apoyo.
+function deudaMamaDelMes(mesId){
+  return tgDeudas()
+    .filter(x=>dirDeuda(x)==="debo" && (!mesId || x.mesId===mesId))
+    .reduce((s,x)=>s+(Number(x.monto)||0),0);
+}
+// Gasto variable = deuda con mamá (movimientos) + lo que ella ha gastado.
+function gastoVariableTotal(m){ return gastoTotal(m,"mama")+gastoTotal(m,"yo")+deudaMamaDelMes(m.id); }
 function totalSaved(){
   const base = (state.config && state.config.savedBase) ? state.config.savedBase : 0;
   return base + state.months.reduce((s,m)=>s+(m.inversion.q1||0)+(m.inversion.q2||0)+(m.inversion.rendimiento||0),0);
@@ -591,7 +601,7 @@ function renderResumen(){
   const m=currentMonth();
   document.getElementById("stBBVA").textContent="$"+fmt(msiTotal(m,"BBVA"));
   document.getElementById("stFijos").textContent="$"+fmt(fijosTotal(m));
-  const varTotal=gastoTotal(m,"mama")+gastoTotal(m,"yo");
+  const varTotal=gastoVariableTotal(m);
   document.getElementById("stVar").textContent="$"+fmt(varTotal);
   const inv=(m.inversion.q1||0)+(m.inversion.q2||0);
   document.getElementById("stInv").textContent="$"+fmt(inv);
@@ -603,7 +613,7 @@ function renderResumen(){
   document.getElementById("metaMini").innerHTML="Saldo: $"+fmt(totalSaved())+" · "+(totalSaved()/META*100).toFixed(2)+"% del millón";
 }
 
-function prevGasto(pm){ return gastoTotal(pm,"mama") + gastoTotal(pm,"yo"); }
+function prevGasto(pm){ return gastoVariableTotal(pm); }
 
 function renderCompare(id, prev, cur, higherIsBad){
   const el=document.getElementById(id);
@@ -764,9 +774,10 @@ function renderCuentasMama(){
 
   const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
   // Gasto variable: deuda con mamá + lo que ella sí ha gastado (personal)
-  set("varDeudaMama","$"+fmt(c.totalDebo));
-  set("varNetoMama","Neto del mes: $"+fmt(c.neto));
+  set("varDeudaMama","$"+fmt(c.totalDeboMov));
+  set("varNetoMama","Sin iPhone, tele ni apoyo");
   set("varGastoPersonal","$"+fmt(gastoTotal(currentMonth(),"yo")));
+  set("varTotal","$"+fmt(gastoVariableTotal(currentMonth())));
   set("resDebo","$"+fmt(c.totalDebo));
   set("resMeDeben","$"+fmt(c.totalMeDeben));
   set("resApoyo","$"+fmt(c.apoyo));
@@ -965,7 +976,7 @@ function renderMas(){
 function buildResumenTexto(m){
   const bbva=msiTotal(m,"BBVA");
   const fijos=fijosTotal(m);
-  const varT=gastoTotal(m,"mama")+gastoTotal(m,"yo");
+  const varT=gastoVariableTotal(m);
   const inv=(m.inversion.q1||0)+(m.inversion.q2||0);
   let t=`FINANZAS ${m.label}\n`;
   t+=`Pagar BBVA: $${fmt(bbva)}\nFijos: $${fmt(fijos)}\nGasto variable: $${fmt(varT)}\nInvertido: $${fmt(inv)}\nRendimiento: $${fmt(m.inversion.rendimiento||0)}\n`;
@@ -1664,6 +1675,13 @@ function init(){
   if(savedCfg && savedCfg.botUrl && !(state.config && state.config.botUrl && state.config.botToken)){
     state.config.botUrl=savedCfg.botUrl;
     state.config.botToken=savedCfg.botToken||"";
+  }
+  // saldo exacto: $505,115.66. Se ajusta la base restando lo ya acumulado
+  // para que los abonos futuros se sigan sumando encima.
+  if(!state.config.savedBaseAjustado){
+    const acum=state.months.reduce((n,m)=>n+(Number(m.inversion?.q1)||0)+(Number(m.inversion?.q2)||0)+(Number(m.inversion?.rendimiento)||0),0);
+    state.config.savedBase=Math.round((505115.66-acum)*100)/100;
+    state.config.savedBaseAjustado=true;
   }
   // una sola vez: el presupuesto de gasto con mamá queda en $3,000
   if(!state.config) state.config={};
