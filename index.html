@@ -343,8 +343,10 @@
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Los datos se sincronizan automáticamente con Telegram.</div>
         <button class="btn btn-ghost btn-sm" onclick="toggleBotConfig()">⚙️ Configurar</button>
         <div id="botConfig" class="hidden" style="margin-top:8px">
-          <input id="botUrl" placeholder="https://...workers.dev" onchange="setBotUrl(this.value)" style="margin-top:6px">
-          <input id="botToken" placeholder="ARTIFACT_TOKEN" onchange="setBotToken(this.value)" style="margin-top:6px">
+          <input id="botUrl" placeholder="https://...workers.dev" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="setBotUrl(this.value,true)" onchange="setBotUrl(this.value)" style="margin-top:6px">
+          <input id="botToken" placeholder="ARTIFACT_TOKEN" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="setBotToken(this.value,true)" onchange="setBotToken(this.value)" style="margin-top:6px">
+          <button class="btn btn-sm" style="margin-top:8px" onclick="saveBotCfg()">💾 Guardar conexión</button>
+          <div id="botCfgState" style="font-size:12px;margin-top:6px"></div>
         </div>
 
     </div>
@@ -840,6 +842,7 @@ function renderMeta(){
 function renderMas(){
   const bu=document.getElementById("botUrl"); if(bu) bu.value=state.config.botUrl||"";
   const bt=document.getElementById("botToken"); if(bt) bt.value=state.config.botToken||"";
+  renderBotCfgState();
 }
 
 function buildResumenTexto(m){
@@ -1156,7 +1159,19 @@ function importData(e){
   const file=e.target.files[0]; if(!file) return;
   const r=new FileReader();
   r.onload=ev=>{
-    try{ const s=JSON.parse(ev.target.result); if(s.months){ state=s; saveState(); renderAll(); toast("Restaurado"); } else toast("Archivo inválido"); }
+    try{
+      const s=JSON.parse(ev.target.result);
+      if(s.months){
+        // conservar la conexión con Telegram al restaurar
+        if(!s.config) s.config={};
+        const cfg=loadCfg();
+        if((!s.config.botUrl || !s.config.botToken) && cfg){
+          s.config.botUrl=cfg.botUrl||"";
+          s.config.botToken=cfg.botToken||"";
+        }
+        state=s; saveState(); saveCfg(); renderAll(); toast("Restaurado");
+      } else toast("Archivo inválido");
+    }
     catch(err){ toast("Error al leer"); }
   };
   r.readAsText(file);
@@ -1229,8 +1244,40 @@ function pdfMama(){
 }
 
 // bot sync
-function setBotUrl(v){ state.config.botUrl=(v||"").trim().replace(/\/+$/,""); saveState(); }
-function setBotToken(v){ state.config.botToken=(v||"").trim(); saveState(); }
+// La conexión se guarda en DOS lugares para que no se pierda al recargar
+// ni al restaurar un respaldo de datos.
+const CFG_KEY="finanzas_cfg_v1";
+function loadCfg(){
+  try{ const raw=localStorage.getItem(CFG_KEY); if(raw){ const c=JSON.parse(raw); if(c&&c.botUrl) return c; } }catch(e){}
+  return null;
+}
+function saveCfg(){
+  try{ localStorage.setItem(CFG_KEY, JSON.stringify({botUrl:state.config.botUrl||"",botToken:state.config.botToken||""})); }catch(e){}
+}
+function setBotUrl(v,quiet){
+  if(!state.config) state.config={};
+  state.config.botUrl=(v||"").trim().replace(/\/+$/,"");
+  saveState(); saveCfg(); renderBotCfgState();
+  if(!quiet) toast("URL guardada");
+}
+function setBotToken(v,quiet){
+  if(!state.config) state.config={};
+  state.config.botToken=(v||"").trim();
+  saveState(); saveCfg(); renderBotCfgState();
+  if(!quiet) toast("Token guardado");
+}
+function saveBotCfg(){
+  saveState(); saveCfg(); renderBotCfgState();
+  const ok=state.config.botUrl && state.config.botToken;
+  toast(ok?"✅ Conexión guardada":"Falta URL o token");
+}
+function renderBotCfgState(){
+  const el=document.getElementById("botCfgState"); if(!el) return;
+  const url=state.config?.botUrl||"", token=state.config?.botToken||"";
+  if(url && token){ el.innerHTML="✅ Conexión guardada"; el.style.color="var(--green)"; }
+  else if(url || token){ el.innerHTML="⚠️ Falta completar (URL y token)"; el.style.color="var(--amber)"; }
+  else { el.innerHTML="Sin configurar"; el.style.color="var(--muted)"; }
+}
 // Mes que se envía al bot: el del calendario real (o el más reciente),
 // para que el resumen no cambie si estás revisando un mes pasado.
 function syncMonth(){
@@ -1468,6 +1515,12 @@ function init(){
     createNewMonth();
   }
   if(!state.current || !state.months.find(m=>m.id===state.current)) state.current=state.months[state.months.length-1].id;
+  // recuperar la conexión guardada si el estado la perdió
+  const savedCfg=loadCfg();
+  if(savedCfg && savedCfg.botUrl && !(state.config && state.config.botUrl && state.config.botToken)){
+    state.config.botUrl=savedCfg.botUrl;
+    state.config.botToken=savedCfg.botToken||"";
+  }
   state.months.forEach(m=>fillEstimatedDays(m));
   saveState();
   renderAll();
