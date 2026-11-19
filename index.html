@@ -669,7 +669,8 @@ function renderGastos(){
   all.forEach(item=>{
     const div=document.createElement("div");
     div.className="row";
-    div.innerHTML=`<div style="flex:1;min-width:0;margin-right:8px"><div style="font-size:13px;font-weight:600;word-break:break-word">${item.desc} <span class="pill pill-pink" style="font-size:10px">${item.cat||"Otro"}</span></div><div style="font-size:11px;color:var(--muted)">${item.fecha} · ${item.who==="mama"?"mamá":"yo"}</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><span style="font-weight:700">$${fmt(item.monto)}</span><button class="btn btn-danger btn-sm" onclick="delGasto('${item.id}','${item.who}')">🗑</button></div>`;
+    const kindBadge=item.kind==="deuda"?'<span class="pill pill-amber" style="font-size:10px">Deuda</span>':'<span class="pill pill-green" style="font-size:10px">Cobro</span>';
+    div.innerHTML=`<div style="flex:1;min-width:0;margin-right:8px"><div style="font-size:13px;font-weight:600;word-break:break-word">${item.desc} <span class="pill pill-pink" style="font-size:10px">${item.cat||"Otro"}</span> ${kindBadge}</div><div style="font-size:11px;color:var(--muted)">${item.fecha} · ${item.who==="mama"?"mamá":"yo"}</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><span style="font-weight:700">$${fmt(item.monto)}</span><button class="btn btn-danger btn-sm" onclick="delGasto('${item.id}','${item.who}')">🗑</button></div>`;
     gl.appendChild(div);
   });
   // category summary
@@ -1207,7 +1208,7 @@ async function importFromBot(){
     let added=0;
     ledger.forEach(mv=>{
       if(state.config.importedIds.includes(mv.id)) return;
-      m.gasto.mama.items.unshift({id:uid(), desc:mv.desc, monto:mv.amount, fecha:mv.date.slice(0,10), cat:"Otro"});
+      m.gasto.mama.items.unshift({id:uid(), desc:mv.desc, monto:mv.amount, fecha:mv.date.slice(0,10), cat:"Otro", kind:mv.kind||"cobro"});
       state.config.importedIds.push(mv.id);
       added++;
     });
