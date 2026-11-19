@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Finanzas 🐳</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ec4899">
@@ -33,11 +33,18 @@
   header .sub{font-size:12px;opacity:.9;margin-top:2px}
   .progress-wrap{margin-top:10px;position:relative}
   .progress-bar{height:22px;background:rgba(255,255,255,.3);border-radius:99px;overflow:hidden}
-  .progress-fill{height:100%;background:#fff;border-radius:99px;transition:width .6s ease;position:relative}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--pink),var(--purple) 55%,var(--blue));border-radius:99px;transition:width .6s ease;position:relative}
   .whale{position:absolute;top:50%;font-size:16px;transition:left .6s ease;pointer-events:none;transform:translate(-50%,-50%);left:100%}
+  .whale.bounce{animation:whaleBounce .7s ease}
+  @keyframes whaleBounce{0%{transform:translate(-50%,-50%) scale(1)}35%{transform:translate(-50%,-115%) scale(1.35)}60%{transform:translate(-50%,-35%) scale(.95)}100%{transform:translate(-50%,-50%) scale(1)}}
   .progress-label{display:flex;justify-content:space-between;font-size:11px;margin-top:4px;opacity:.95}
   main{flex:1;overflow-y:auto;padding:12px 12px 80px;-webkit-overflow-scrolling:touch}
-  .card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 6px 20px rgba(17,24,39,.06),0 1px 3px rgba(17,24,39,.04)}
+  .card-link{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+  .card-link:hover{box-shadow:0 10px 26px rgba(17,24,39,.11)}
+  .card-link:active{transform:scale(.99)}
+  .empty-state{text-align:center;padding:18px 10px;color:var(--muted);font-size:13px;background:var(--surface-2);border-radius:12px;border:1px dashed var(--line)}
+  .empty-state .em{font-size:24px;display:block;margin-bottom:4px}
   .card h3{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--pink-dark)}
   .row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
   .row:last-child{border-bottom:none}
@@ -51,7 +58,7 @@
   .btn{padding:8px 14px;border-radius:10px;font-weight:600;font-size:13px;background:var(--pink);color:#fff;transition:transform .1s}
   .btn:active{transform:scale(.97)}
   .btn-ghost{background:var(--pink-light);color:var(--pink-dark)}
-  .btn-sm{padding:4px 10px;font-size:12px}
+  .btn-sm{padding:4px 10px;font-size:12px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
   .btn-danger{background:#fee2e2;color:#991b1b}
   input,select,textarea{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:inherit;background:#fff}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pink)}
@@ -82,6 +89,7 @@
   .sync-status{font-size:12px;padding:6px 10px;border-radius:8px;margin:0 0 10px;background:rgba(148,163,184,.14);color:var(--muted)}
   .sync-status.ok{background:rgba(16,185,129,.12);color:var(--green)}
   .sync-status.warn{background:rgba(245,158,11,.14);color:var(--amber)}
+  .sync-retry{margin-left:8px;background:rgba(245,158,11,.22);color:inherit;font-weight:800;font-size:11px;padding:4px 8px;border-radius:6px;min-height:28px}
   .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
   .modal{background:var(--card);border-radius:16px;padding:16px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto}
   .arrow-up{color:var(--green);font-weight:700}
@@ -101,6 +109,9 @@
   .month-cal{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
   .month-chip{background:var(--pink-light);border-radius:8px;padding:6px 4px;text-align:center;font-size:12px;cursor:pointer;border:2px solid transparent}
   .month-chip.active{background:var(--pink);color:#fff;font-weight:700}
+  .month-chip.today{box-shadow:inset 0 0 0 2px var(--purple)}
+  .month-chip.today::after{content:"hoy";display:block;font-size:9px;font-weight:800;color:var(--purple);line-height:1.1}
+  .month-chip.active.today::after{color:#fff}
   .month-chip small{display:block;font-size:10px;opacity:.85}
   .collapse-head{cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center}
   .collapse-head .caret{font-size:12px;color:var(--muted);transition:transform .2s;display:inline-block}
@@ -108,9 +119,15 @@
   .week-cell{background:var(--pink-light);border-radius:10px;padding:8px;text-align:center}
   .week-cell .w{font-size:11px;color:var(--muted)}
   .week-cell .a{font-size:14px;font-weight:700;color:var(--pink-dark)}
-  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:200;opacity:0;transition:opacity .3s}
-  .toast.show{opacity:1}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:200;opacity:0;transition:opacity .3s;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 32px);box-shadow:0 8px 24px rgba(0,0,0,.22);pointer-events:none}
+  .toast.show{opacity:1;pointer-events:auto}
+  .toast.ok{background:var(--green)}
+  .toast.warn{background:#b45309}
+  .toast.err{background:var(--red)}
+  .toast-undo{background:rgba(255,255,255,.22);color:#fff;font-weight:800;font-size:12px;padding:5px 10px;border-radius:8px;min-height:32px;white-space:nowrap}
   /* animations */
+  .stagger>*{animation:staggerIn .3s ease both}
+  @keyframes staggerIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   .tab{transition:opacity .2s ease}
   .tab.active{animation:fadeIn .25s ease}
   @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -155,6 +172,8 @@
   body.dark .chatbox{background:#1e293b}
   body.dark .chatmsg .txt{background:#0f172a;color:#e5e7eb}
   body.dark .bottomnav{background:#16213e;border-color:#334155}
+  body.dark .card{box-shadow:0 6px 20px rgba(0,0,0,.24)}
+  body.compact .btn-sm{min-height:38px}
 </style>
 </head>
 <body>
@@ -226,8 +245,8 @@
         </div>
         <div class="chatbox" id="chatbox"></div>
       </div>
-      <div class="card">
-        <h3>🎯 Meta del millón</h3>
+      <div class="card card-link" role="button" tabindex="0" title="Ver meta completa" onclick="showTab('meta')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showTab('meta')}">
+        <h3>🎯 Meta del millón <span style="float:right;font-size:12px;color:var(--pink)">Ver meta →</span></h3>
         <div style="font-size:13px" id="metaMini"></div>
       </div>
     </div>
@@ -277,6 +296,7 @@
             <button class="btn btn-ghost btn-sm" id="fltLiq" onclick="setDeudaFilter('liquidados')">Liquidados</button>
             <button class="btn btn-ghost btn-sm" id="fltAll" onclick="setDeudaFilter('todos')">Todos</button>
           </div>
+          <input id="deudaSearch" type="search" placeholder="🔍 Buscar MSI o movimiento…" autocomplete="off" oninput="renderDeudas()" style="margin-top:8px">
         </div>
       </div>
       <div class="card">
@@ -503,7 +523,6 @@
     <button class="navbtn" data-tab="gastos" onclick="showTab('gastos')"><span class="ic">💸</span>Gastos</button>
     <button class="navbtn" data-tab="inversion" onclick="showTab('inversion')"><span class="ic">💰</span>Inversión</button>
     <button class="navbtn" data-tab="rendim" onclick="showTab('rendim')"><span class="ic">📈</span>Rendim.</button>
-    <button class="navbtn" data-tab="meta" onclick="showTab('meta')"><span class="ic">🐳</span>Meta</button>
     <button class="navbtn" data-tab="simular" onclick="showTab('simular')"><span class="ic">🔮</span>Simular</button>
     <button class="navbtn" data-tab="mas" onclick="showTab('mas')"><span class="ic">⚙️</span>Más</button>
   </nav>
@@ -678,10 +697,11 @@ function renderMonthCalendars(){
     const el=document.getElementById(cid); if(!el) return;
     el.innerHTML="";
     const sel=invSelMonth().id;
+    const hoy=monthKey(new Date());
     state.months.forEach(m=>{
       const aport=(m.inversion.q1||0)+(m.inversion.q2||0);
       const b=document.createElement("div");
-      b.className="month-chip"+(m.id===sel?" active":"");
+      b.className="month-chip"+(m.id===sel?" active":"")+(m.id===hoy?" today":"");
       b.title=m.label+" · aportación $"+fmt(aport);
       b.innerHTML=`${m.label.split(" ")[0].slice(0,3)}<small>$${fmtI(aport)}</small>`;
       b.onclick=()=>selectInvMonth(m.id);
@@ -704,7 +724,31 @@ function showTab(name){
     importFromBot(true).catch(()=>{});
   }
 }
-function toast(msg){ haptic(10); const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+let toastTimer=null;
+function showToast(msg,opts){
+  opts=opts||{};
+  const t=document.getElementById("toast"); if(!t) return;
+  clearTimeout(toastTimer);
+  t.className="toast"+(opts.type?" "+opts.type:"");
+  t.innerHTML="";
+  const span=document.createElement("span"); span.textContent=msg; t.appendChild(span);
+  if(opts.undo){
+    const b=document.createElement("button");
+    b.className="toast-undo"; b.type="button"; b.textContent="Deshacer";
+    b.onclick=(e)=>{ e.stopPropagation(); clearTimeout(toastTimer); t.classList.remove("show"); opts.undo(); };
+    t.appendChild(b);
+  }
+  t.classList.add("show");
+  toastTimer=setTimeout(()=>t.classList.remove("show"),opts.duration||2200);
+}
+function toast(msg,type){ haptic(10); showToast(msg,{type:type}); }
+function toastUndo(msg,undo){ haptic(15); showToast(msg,{undo:undo,type:"warn",duration:5000}); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function emptyState(em,text){ return `<div class="empty-state"><span class="em">${em}</span>${text}</div>`; }
+// Retrasa un borrado en el bot para poder cancelarlo si el usuario deshace.
+const undoBotTimers={};
+function scheduleUndoBot(key,fn){ cancelUndoBot(key); undoBotTimers[key]=setTimeout(()=>{ delete undoBotTimers[key]; fn(); },5200); }
+function cancelUndoBot(key){ if(undoBotTimers[key]){ clearTimeout(undoBotTimers[key]); delete undoBotTimers[key]; } }
 
 // ---------- RENDER ----------
 function renderAll(){ applyCollapsed(); renderMonthCalendars(); renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderCuentasMama(); renderInversion(); renderRendim(); renderSimulacion(); renderMeta(); renderMas(); renderAlerts(); }
@@ -845,14 +889,17 @@ function renderDeudas(){
     }
   });
   const isLiq=(it)=> it.liquidado || it.pago>=it.total;
+  const q=(document.getElementById("deudaSearch")?.value||"").trim().toLowerCase();
+  const match=(it)=>!q || String(it.desc||"").toLowerCase().includes(q) || String(it.tarjeta||"").toLowerCase().includes(q);
+  const filtrar=(arr)=>(arr||[]).filter(item=>(filter==="todos"?true:filter==="liquidados"?isLiq(item):!isLiq(item)) && match(item));
   // MSI list
   const list=document.getElementById("msiList");
-  list.innerHTML="";
-  m.msi.filter(item=> filter==="todos" ? true : filter==="liquidados" ? isLiq(item) : !isLiq(item)).forEach(item=>{
+  list.innerHTML=""; list.classList.add("stagger");
+  filtrar(m.msi).forEach((item,i)=>{
     const pct=item.total?Math.min(100,(item.pago/item.total)*100):0;
     const done=item.pago>=item.total;
     const div=document.createElement("div");
-    div.className="msi-item";
+    div.className="msi-item"; div.style.animationDelay=(i*35)+"ms";
     div.innerHTML=`
       <div class="msi-head">
         <div><div class="msi-desc">${item.desc}</div><div class="msi-tarjeta">${item.tarjeta}</div></div>
@@ -863,7 +910,8 @@ function renderDeudas(){
     `;
     list.appendChild(div);
   });
-  if(!m.msi.length) list.innerHTML="<div style='color:var(--muted);font-size:13px'>Sin MSI</div>";
+  if(!m.msi.length) list.innerHTML=emptyState("💳","Aún no hay MSI. Se agregan cuando compras a meses.");
+  else if(!filtrar(m.msi).length) list.innerHTML=emptyState("🔍",q?'No hay MSI que coincidan con «'+esc(q)+'».':'No hay MSI con este filtro.');
   document.getElementById("apoyoInput").value=m.apoyo||0;
   // mama
   // totals by card
@@ -889,13 +937,13 @@ function renderDeudas(){
     mt.appendChild(div);
   }
   const ml=document.getElementById("mamaList");
-  ml.innerHTML="";
+  ml.innerHTML=""; ml.classList.add("stagger");
   const allMamaTotal=m.deudaMama.reduce((s,x)=>s+x.monto,0);
   const total=allMamaTotal;
-  m.deudaMama.filter(item=> filter==="todos" ? true : filter==="liquidados" ? isLiq(item) : !isLiq(item)).forEach(item=>{
+  filtrar(m.deudaMama).forEach((item,i)=>{
     const pct=item.total?Math.min(100,(item.pago/item.total)*100):0;
     const div=document.createElement("div");
-    div.className="msi-item";
+    div.className="msi-item"; div.style.animationDelay=(i*35)+"ms";
     div.innerHTML=`
       <div class="msi-head">
         <div><div class="msi-desc">${item.desc}</div><div class="msi-tarjeta">Deuda mamá</div></div>
@@ -906,6 +954,8 @@ function renderDeudas(){
     `;
     ml.appendChild(div);
   });
+  if(!m.deudaMama.length) ml.innerHTML=emptyState("👩","Aún no hay deudas con mamá en este mes.");
+  else if(!filtrar(m.deudaMama).length) ml.innerHTML=emptyState("🔍",q?'No hay movimientos que coincidan con «'+esc(q)+'».':'No hay movimientos con este filtro.');
   document.getElementById("mamaTotal").textContent="$"+fmt(total);
 }
 
@@ -1067,8 +1117,8 @@ function renderGastos(){
     div.innerHTML=`<span>${c}</span><span>$${fmt(v)}</span>`;
     cs.appendChild(div);
   });
-  if(!Object.keys(catTot).length) cs.innerHTML="<div style='color:var(--muted);font-size:13px'>Sin gastos</div>";
-  if(!all.length) gl.innerHTML="<div style='color:var(--muted);font-size:13px'>Sin gastos</div>";
+  if(!Object.keys(catTot).length) cs.innerHTML=emptyState("🏷️","Aún no hay categorías este mes.");
+  if(!all.length) gl.innerHTML=emptyState("🧾","Aún no hay gastos personales este mes. Agrega uno con «+ Agregar gasto».");
   // estado de Telegram
   const gs=document.getElementById("gastoState");
   if(gs){
@@ -1194,7 +1244,7 @@ function renderMeta(){
   const lastH=state.config.lastHito||0;
   let crossed=0;
   hitos.forEach(hh=>{ if(saldo>=hh && hh>lastH) crossed=Math.max(crossed,hh); });
-  if(crossed>0){ state.config.lastHito=crossed; saveState(); launchConfetti(); toast("¡Hito alcanzado: $"+fmtI(crossed)+"! 🎉"); }
+  if(crossed>0){ state.config.lastHito=crossed; saveState(); bounceWhale(); launchConfetti(); toast("¡Hito alcanzado: $"+fmtI(crossed)+"! 🎉","ok"); }
   // meta chart
   drawMetaChart();
   // tiempo estimado: promedio de últimos 3 meses de ahorro
@@ -1260,8 +1310,8 @@ function renderSimulacion(){
   const tbl=document.getElementById("simTabla");
   if(tbl){
     const netoCls=v=>v>=0?"num-neg":"num-pos";
-    tbl.innerHTML="<thead><tr><th>Mes</th><th>MSI</th><th>Tel/tele</th><th>Apoyo</th><th>Deuda</th><th>Neto</th></tr></thead><tbody>"+
-      rows.map(r=>`<tr><td>${simShort(r.k)}</td><td>$${fmtI(r.msi)}</td><td>$${fmtI(r.tel)}</td><td class="num-pos">$${fmtI(r.apo)}</td><td><b>$${fmtI(r.deuda)}</b></td><td><b class="${netoCls(r.neto)}">${simMoney(r.neto)}</b></td></tr>`).join("")+
+    tbl.innerHTML="<thead><tr><th>Mes</th><th>MSI</th><th>Tel/tele</th><th>Apoyo</th><th>Deuda</th><th>Neto</th></tr></thead><tbody class=\"stagger\">"+
+      rows.map((r,i)=>`<tr style="animation-delay:${i*30}ms"><td>${simShort(r.k)}</td><td>$${fmtI(r.msi)}</td><td>$${fmtI(r.tel)}</td><td class="num-pos">$${fmtI(r.apo)}</td><td><b>$${fmtI(r.deuda)}</b></td><td><b class="${netoCls(r.neto)}">${simMoney(r.neto)}</b></td></tr>`).join("")+
       `</tbody><tfoot><tr><td><b>Total</b></td><td></td><td></td><td><b class="num-pos">$${fmtI(sumApoyo)}</b></td><td><b>$${fmtI(sumDeuda)}</b></td><td><b class="${netoCls(sumDeuda-sumApoyo)}">${simMoney(sumDeuda-sumApoyo)}</b></td></tr></tfoot>`;
   }
   const det=document.getElementById("simDetalle");
@@ -1309,30 +1359,43 @@ function buildResumenTexto(m){
 }
 
 // ---------- ACTIONS ----------
+function celebrarLiquidacion(desc){
+  const m=currentMonth();
+  const queda=msiPendTotal(m)+msiMamaPendTotal(m);
+  launchConfetti();
+  toast(queda<=0?"🎉 ¡Todas las deudas liquidadas!":"🎉 Liquidado: "+desc,"ok");
+}
 function advanceMsi(id){
   const m=currentMonth();
   const it=m.msi.find(x=>x.id===id);
   if(!it) return;
+  const antes=it.liquidado||it.pago>=it.total;
   it.pago=Math.min(it.total,it.pago+1);
-  if(it.pago>=it.total){ it.liquidado=true; toast("Liquidado: "+it.desc); }
+  if(!antes && it.pago>=it.total){ it.liquidado=true; celebrarLiquidacion(it.desc); }
   saveState(); renderAll();
 }
 function delMsi(id){
   const m=currentMonth();
-  m.msi=m.msi.filter(x=>x.id!==id);
+  const idx=m.msi.findIndex(x=>x.id===id); if(idx<0) return;
+  const [it]=m.msi.splice(idx,1);
   saveState(); renderAll();
+  toastUndo("Eliminado: "+it.desc,()=>{ m.msi.splice(idx,0,it); saveState(); renderAll(); toast("Restaurado","ok"); });
 }
 function advanceMama(id){
   const m=currentMonth();
   const it=m.deudaMama.find(x=>x.id===id);
   if(!it) return;
+  const antes=it.liquidado||it.pago>=it.total;
   it.pago=Math.min(it.total,it.pago+1);
+  if(!antes && it.pago>=it.total){ it.liquidado=true; celebrarLiquidacion(it.desc); }
   saveState(); renderAll();
 }
 function delMama(id){
   const m=currentMonth();
-  m.deudaMama=m.deudaMama.filter(x=>x.id!==id);
+  const idx=m.deudaMama.findIndex(x=>x.id===id); if(idx<0) return;
+  const [it]=m.deudaMama.splice(idx,1);
   saveState(); renderAll();
+  toastUndo("Eliminado: "+it.desc,()=>{ m.deudaMama.splice(idx,0,it); saveState(); renderAll(); toast("Restaurado","ok"); });
 }
 function setApoyo(v){
   const m=currentMonth();
@@ -1397,33 +1460,50 @@ function saveGasto(){
   syncToBot(true).catch(()=>{});
 }
 function delGasto(id,who){
-  let it=null, target=null;
+  let it=null, target=null, idx=-1;
   state.months.forEach(mo=>{
-    const f=(mo.gasto?.[who]?.items||[]).find(x=>x.id===id);
-    if(f){ it=f; target=mo; }
+    const arr=(mo.gasto&&mo.gasto[who]&&mo.gasto[who].items)||[];
+    const i=arr.findIndex(x=>x.id===id);
+    if(i>=0){ it=arr[i]; target=mo; idx=i; }
   });
   if(!it) return;
-  if(it.tgId){
+  const tgId=it.tgId;
+  if(tgId){
     if(!state.config) state.config={};
     if(!Array.isArray(state.config.tgIgnored)) state.config.tgIgnored=[];
-    state.config.tgIgnored.push(it.tgId);
-    borrarEnBot(it.tgId);   // que también desaparezca del bot
+    if(!state.config.tgIgnored.includes(tgId)) state.config.tgIgnored.push(tgId);
+    scheduleUndoBot("mov:"+tgId,()=>borrarEnBot(tgId));
   }
-  target.gasto[who].items=target.gasto[who].items.filter(x=>x.id!==id);
+  target.gasto[who].items.splice(idx,1);
   saveState(); renderAll();
+  toastUndo("Eliminado: "+it.desc,()=>{
+    target.gasto[who].items.splice(idx,0,it);
+    if(tgId && state.config && Array.isArray(state.config.tgIgnored))
+      state.config.tgIgnored=state.config.tgIgnored.filter(x=>x!==tgId);
+    cancelUndoBot("mov:"+tgId);
+    saveState(); renderAll(); toast("Restaurado","ok");
+  });
 }
 
 // Gasto personal registrado con /gasto en Telegram.
 async function delGastoTelegram(id){
-  const g=(state.tgGastos||[]).find(x=>x.id===id); if(!g) return;
-  state.tgGastos=state.tgGastos.filter(x=>x.id!==id);
+  const idx=(state.tgGastos||[]).findIndex(x=>x.id===id); if(idx<0) return;
+  const g=state.tgGastos[idx];
+  state.tgGastos.splice(idx,1);
   saveState(); renderAll();
+  if(g.tgId) scheduleUndoBot("gasto:"+g.tgId,()=>borrarGastoEnBot(g.tgId));
+  toastUndo("Eliminado: "+g.desc,()=>{
+    state.tgGastos.splice(idx,0,g);
+    cancelUndoBot("gasto:"+g.tgId);
+    saveState(); renderAll(); toast("Restaurado","ok");
+  });
+}
+async function borrarGastoEnBot(tgId){
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,"");
   const token=(state.config?.botToken||"").trim();
-  if(url&&token){
-    try{ await fetch(url+"/api/gastos/delete",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({id:g.tgId})}); }
-    catch(e){ console.warn("No se pudo borrar el gasto en el bot",e); }
-  }
+  if(!url||!token||!tgId) return;
+  try{ await fetch(url+"/api/gastos/delete",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({id:tgId})}); }
+  catch(e){ console.warn("No se pudo borrar el gasto en el bot",e); }
 }
 
 // Borra el movimiento en el bot para que las cuentas sigan cuadrando.
@@ -1782,7 +1862,7 @@ function applySetupLink(){
 function saveBotCfg(){
   saveState(); saveCfg(); renderBotCfgState(); renderBotStatus();
   const ok=state.config.botUrl && state.config.botToken;
-  toast(ok?"✅ Conexión guardada, sincronizando…":"Falta URL o token");
+  toast(ok?"✅ Conexión guardada, sincronizando…":"Falta URL o token",ok?"ok":"warn");
   if(ok) importFromBot(true).catch(()=>{});
 }
 function renderBotCfgState(){
@@ -1803,7 +1883,7 @@ function syncMonth(){
 
 async function syncToBot(silent){
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,""); const token=(state.config?.botToken||"").trim();
-  if(!url||!token){ if(!silent) toast("Falta URL o token"); return; }
+  if(!url||!token){ if(!silent) toast("Falta URL o token","warn"); return; }
   const m=syncMonth();
   const summary=buildResumenTexto(m);
   try{
@@ -1820,11 +1900,11 @@ async function syncToBot(silent){
     state.config.lastSync=Date.now();
     state.config.lastSyncError=null;
     saveState(); renderSyncStatus();
-    if(!silent) toast("Sincronizado");
+    if(!silent) toast("Sincronizado","ok");
   }catch(e){
     state.config.lastSyncError=Date.now();
     saveState(); renderSyncStatus();
-    if(!silent) toast("Error de red");
+    if(!silent) toast("Error de red","warn");
   }
 }
 
@@ -1968,7 +2048,7 @@ function applySharedConfigFromBot(s){
 
 async function importFromBot(silent){
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,""); const token=(state.config?.botToken||"").trim();
-  if(!url||!token){ if(!silent) toast("Falta URL o token"); return; }
+  if(!url||!token){ if(!silent) toast("Falta URL o token","warn"); return; }
   try{
     const [lr,gr,sr]=await Promise.all([
       fetch(url+"/api/ledger?t="+Date.now(),{headers:{"X-Auth-Token":token}}),
@@ -2004,13 +2084,13 @@ async function importFromBot(silent){
       if(gres.updated) parts.push(`${gres.updated} gasto(s) actualizado(s)`);
       if(gres.removed) parts.push(`${gres.removed} gasto(s) borrado(s)`);
       if(cfgChanges) parts.push("datos compartidos actualizados");
-      toast(parts.length?`Telegram: ${parts.join(", ")}`:"Sin cambios de Telegram");
+      toast(parts.length?`Telegram: ${parts.join(", ")}`:"Sin cambios de Telegram","ok");
     }
   }catch(e){
     console.error(e);
     state.config.lastSyncError=Date.now();
     saveState(); renderSyncStatus();
-    if(!silent) toast("Error: "+(e.message||"red"));
+    if(!silent) toast("Error: "+(e.message||"red"),"warn");
   }
 }
 
@@ -2033,13 +2113,17 @@ function renderSyncStatus(){
   const last=state.config.lastSync||0;
   const err=state.config.lastSyncError||0;
   if(err && err>last){
-    el.textContent="⚠️ Sin conexión con Telegram · mostrando últimos datos guardados";
+    el.innerHTML='<span>⚠️ Sin conexión con Telegram · mostrando últimos datos guardados</span><button type="button" class="sync-retry" onclick="retrySync()">🔄 Reintentar</button>';
     el.className="sync-status warn";
     return;
   }
   if(!last){ el.textContent="⏳ Sincronizando…"; el.className="sync-status"; return; }
   el.textContent="✅ Sincronizado "+timeAgo(last);
   el.className="sync-status ok";
+}
+function retrySync(){
+  toast("Reintentando conexión…");
+  importFromBot(false).catch(()=>{});
 }
 
 // Tema: "system" | "light" | "dark". Se guarda por dispositivo (no se sincroniza).
@@ -2097,6 +2181,10 @@ function renderBotStatus(){
   const token=(state.config?.botToken||"").trim();
   if(url && token){ el.textContent="✅ Conectado a Telegram (sincronización automática activa)"; el.style.color="var(--green)"; }
   else { el.textContent="⚠️ No configurado. Pulsa \"Configurar bot\" para conectar."; el.style.color="var(--amber)"; }
+}
+function bounceWhale(){
+  const w=document.getElementById("whale"); if(!w) return;
+  w.classList.remove("bounce"); void w.offsetWidth; w.classList.add("bounce");
 }
 function launchConfetti(){
   haptic(30);
@@ -2280,7 +2368,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=13").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=14").catch(()=>{}); }
 </script>
 </body>
 </html>
