@@ -291,6 +291,7 @@
         <h3>📝 Movimientos</h3>
         <div id="gastoState" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
         <div id="gastoList"></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px"><span>💰 Total de movimientos</span><span id="gastoListTotal">$0</span></div>
         <button class="btn btn-ghost btn-sm" onclick="openGastoModal()">+ Agregar gasto</button>
         <button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="importFromBot()">🔄 Actualizar de Telegram</button>
       </div>
@@ -922,6 +923,8 @@ function renderGastos(){
     ...m.gasto.yo.items.filter(x=>!x.tgId).map(x=>({...x,who:"yo"})),
     ...(state.tgGastos||[]).filter(x=>monthIdOf(x.fecha)===m.id).map(x=>({id:x.id,tgGastoId:x.tgId,desc:x.desc,monto:x.monto,fecha:x.fecha,cat:x.cat||"Otro",who:"yo"}))
   ].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const glTotal=document.getElementById("gastoListTotal");
+  if(glTotal) glTotal.textContent="$"+fmt(all.reduce((s,x)=>s+(Number(x.monto)||0),0));
   all.forEach(item=>{
     const div=document.createElement("div");
     div.className="row";
