@@ -423,6 +423,10 @@
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Los datos se sincronizan automáticamente con Telegram.</div>
         <button class="btn btn-ghost btn-sm" onclick="toggleBotConfig()">⚙️ Configurar</button>
         <div id="botConfig" class="hidden" style="margin-top:8px">
+          <div style="font-size:11px;color:var(--muted)">Forma fácil: pega aquí tu enlace de configuración</div>
+          <input id="setupLinkInput" placeholder="Pega el enlace que te di (…?setup=…)" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:6px">
+          <button class="btn btn-sm" style="margin-top:6px" onclick="applySetupLink()">🔗 Conectar con enlace</button>
+          <div style="font-size:11px;color:var(--muted);margin:10px 0 4px">O escribe la URL y el token:</div>
           <input id="botUrl" placeholder="https://...workers.dev" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="setBotUrl(this.value,true)" onchange="setBotUrl(this.value)" style="margin-top:6px">
           <input id="botToken" placeholder="ARTIFACT_TOKEN" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="setBotToken(this.value,true)" onchange="setBotToken(this.value)" style="margin-top:6px">
           <button class="btn btn-sm" style="margin-top:8px" onclick="saveBotCfg()">💾 Guardar conexión</button>
@@ -1590,10 +1594,34 @@ function setBotToken(v,quiet){
   saveState(); saveCfg(); renderBotCfgState();
   if(!quiet) toast("Token guardado");
 }
+// Pega el enlace personal (?setup=…) desde dentro de la PWA.
+function applySetupLink(){
+  const el=document.getElementById("setupLinkInput");
+  const raw=((el&&el.value)||"").trim();
+  if(!raw){ toast("Pega el enlace primero"); return; }
+  try{
+    let s;
+    try{ s=new URL(raw,location.href).searchParams.get("setup"); }catch(e){}
+    if(!s) s=raw; // por si pegó solo la parte en base64
+    const cfg=JSON.parse(atob(s));
+    if(!cfg.botUrl) throw new Error("sin URL");
+    state.config=state.config||{};
+    state.config.botUrl=cfg.botUrl;
+    state.config.botToken=cfg.botToken||"";
+    saveState(); saveCfg();
+    const u=document.getElementById("botUrl"), t=document.getElementById("botToken");
+    if(u) u.value=state.config.botUrl;
+    if(t) t.value=state.config.botToken;
+    renderBotCfgState(); renderBotStatus();
+    toast("✅ Conectando con Telegram…");
+    importFromBot(false).catch(()=>{});
+  }catch(e){ toast("Enlace no válido"); }
+}
 function saveBotCfg(){
-  saveState(); saveCfg(); renderBotCfgState();
+  saveState(); saveCfg(); renderBotCfgState(); renderBotStatus();
   const ok=state.config.botUrl && state.config.botToken;
-  toast(ok?"✅ Conexión guardada":"Falta URL o token");
+  toast(ok?"✅ Conexión guardada, sincronizando…":"Falta URL o token");
+  if(ok) importFromBot(true).catch(()=>{});
 }
 function renderBotCfgState(){
   const el=document.getElementById("botCfgState"); if(!el) return;
@@ -2056,7 +2084,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=9").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=10").catch(()=>{}); }
 </script>
 </body>
 </html>
