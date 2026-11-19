@@ -231,7 +231,7 @@
           <button class="btn btn-ghost btn-sm" id="chipDebo" onclick="setMamaFilter('debo')">🔴 Debo</button>
           <button class="btn btn-ghost btn-sm" id="chipMeDeben" onclick="setMamaFilter('me_deben')">🟢 Me deben</button>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">El chip <b>Debro</b> incluye iPhone y tele; en Gasto variable se cuentan solo los movimientos.</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">El chip <b>Debo</b> y el gasto variable incluyen iPhone y tele, igual que en Telegram.</div>
         <div id="mamaDebtList"></div>
         <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span id="mamaDebtLbl">Total que debo</span><span id="mamaDebtTotal">$0</span></div>
       </div>
@@ -241,7 +241,7 @@
           <div class="stat" style="padding:8px">
             <div class="v" id="varDeudaMama" style="font-size:17px">$0</div>
             <div class="l">🔴 Lo que le debo a mamá</div>
-            <div id="varNetoMama" style="font-size:11px;color:var(--muted);margin-top:2px">Sin iPhone, tele ni apoyo</div>
+            <div id="varNetoMama" style="font-size:11px;color:var(--muted);margin-top:2px">Incluye iPhone y tele · igual que Telegram</div>
           </div>
           <div class="stat" style="padding:8px">
             <div class="v" id="varGastoPersonal" style="font-size:17px">$0</div>
@@ -578,9 +578,14 @@ function deudaMamaDelMes(mesId){
     .filter(x=>dirDeuda(x)==="debo" && (!mesId || x.mesId===mesId))
     .reduce((s,x)=>s+(Number(x.monto)||0),0);
 }
-// Gasto variable = deuda con mamá (movimientos) + lo que ella ha gastado.
-function gastoVariableTotal(m){ return gastoTotal(m,"mama")+gastoTotal(m,"yo")+deudaMamaDelMes(m.id); }
-// Lo gastado con mamá = movimientos que le debo + gastos sueltos con ella.
+// Deuda con mamá = movimientos + iPhone y tele pendientes del mes (como en Telegram).
+function deudaMamaTotalDelMes(m){
+  const msi=((m&&m.deudaMama)||[]).filter(x=>!(x.pago>=x.total)&&!x.liquidado).reduce((s,x)=>s+(Number(x.monto)||0),0);
+  return deudaMamaDelMes(m.id)+msi;
+}
+// Gasto variable = deuda con mamá + lo que ella ha gastado.
+function gastoVariableTotal(m){ return gastoTotal(m,"mama")+gastoTotal(m,"yo")+deudaMamaTotalDelMes(m); }
+// Lo gastado con mamá en el mes = movimientos que le debo + gastos sueltos con ella.
 function gastoMamaTotal(m){ return deudaMamaDelMes(m.id)+gastoTotal(m,"mama"); }
 function totalSaved(){
   const base = (state.config && state.config.savedBase) ? state.config.savedBase : 0;
@@ -781,9 +786,9 @@ function renderCuentasMama(){
   }
 
   const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
-  // Gasto variable: deuda con mamá + lo que ella sí ha gastado (personal)
-  set("varDeudaMama","$"+fmt(c.totalDeboMov));
-  set("varNetoMama","Sin iPhone, tele ni apoyo");
+  // Gasto variable: deuda con mamá (igual que Telegram) + lo que ella ha gastado
+  set("varDeudaMama","$"+fmt(c.totalDebo));
+  set("varNetoMama","Incluye iPhone y tele · igual que Telegram");
   set("varGastoPersonal","$"+fmt(gastoTotal(currentMonth(),"yo")));
   set("varTotal","$"+fmt(gastoVariableTotal(currentMonth())));
   set("resDebo","$"+fmt(c.totalDebo));
