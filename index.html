@@ -171,9 +171,8 @@
         <div class="row"><span>🔴 Lo que le debo</span><span id="resDebo" style="font-weight:700">$0</span></div>
         <div class="row"><span>📱 Teléfono y tele (pagos fijos)</span><span id="resTelTele">$0</span></div>
         <div class="row"><span>🟢 Me deben</span><span id="resMeDeben" style="font-weight:700">$0</span></div>
-        <div class="row"><span>💝 Apoyo del mes</span><span id="resApoyo">$0</span></div>
         <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span id="resNetoLbl">Este mes le das</span><span id="resNeto">$0</span></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Lo que le debo + teléfono y tele + apoyo − me deben = neto</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">El neto ya incluye el apoyo y el teléfono/tele</div>
       </div>
       <div class="card">
         <h3>📌 Resumen total del mes</h3>
@@ -183,11 +182,11 @@
         <div class="row"><span>💝 Apoyo</span><span id="apApoyo">$0</span></div>
         <div class="row"><span>🟢 Menos: lo que me deben</span><span id="apMeDeben">$0</span></div>
         <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span>Neto que le das a mamá</span><span id="apNeto">$0</span></div>
-        <div style="font-size:12px;font-weight:700;margin-top:8px">Lo que pagas de tus deudas</div>
+        <div style="font-size:12px;font-weight:700;margin-top:8px">Lo tuyo del mes</div>
         <div class="row"><span>💳 Mis MSI</span><span id="apMsi">$0</span></div>
-        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span>💰 Total a pagar al mes</span><span id="apTotal">$0</span></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">Es el neto con mamá + tus MSI. No incluye gastos personales porque ya los gastaste.</div>
-        <div class="row" style="margin-top:6px"><span>📝 Gastos personales (aparte)</span><span id="apGastos">$0</span></div>
+        <div class="row"><span>📝 Gastos personales</span><span id="apGastos">$0</span></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span>💰 Total del mes</span><span id="apTotal">$0</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Neto con mamá + tus MSI + tus gastos personales.</div>
       </div>
       <div class="card">
         <h3>⚡ Captura rápida</h3>
@@ -822,20 +821,19 @@ function renderCuentasMama(){
   set("resDebo","$"+fmt(c.totalDeboMov));
   set("resTelTele","$"+fmt(c.totalMsi));
   set("resMeDeben","$"+fmt(c.totalMeDeben));
-  set("resApoyo","$"+fmt(c.apoyo));
   set("resNetoLbl", c.neto>=0 ? "Este mes le das" : "Este mes te debe");
   set("resNeto","$"+fmt(Math.abs(c.neto)));
   // Apartado: pagos de mamá + mis MSI = total a pagar al mes
   const m=currentMonth();
-  const apNeto=Math.abs(c.neto), apMsi=msiPendTotal(m);
+  const apNeto=Math.abs(c.neto), apMsi=msiPendTotal(m), apGastos=gastoTotal(m,"yo");
   set("apDebo","$"+fmt(c.totalDeboMov));
   set("apTelTele","$"+fmt(c.totalMsi));
   set("apApoyo","$"+fmt(c.apoyo));
   set("apMeDeben","−$"+fmt(c.totalMeDeben));
   set("apNeto","$"+fmt(apNeto));
   set("apMsi","$"+fmt(apMsi));
-  set("apTotal","$"+fmt(apNeto+apMsi));
-  set("apGastos","$"+fmt(gastoTotal(m,"yo")));
+  set("apGastos","$"+fmt(apGastos));
+  set("apTotal","$"+fmt(apNeto+apMsi+apGastos));
 }
 
 function renderGastos(){
