@@ -172,6 +172,7 @@
         <div class="row"><span>Gasto</span><span class="compare" id="cmpGasto"></span></div>
         <div class="row"><span>Inversión</span><span class="compare" id="cmpInv"></span></div>
         <div class="row"><span>Rendimiento</span><span class="compare" id="cmpRend"></span></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px;margin-top:4px"><span>⏱️ Rendimiento ganado hasta hoy</span><span id="resRendHoy">$0</span></div>
       </div>
       <div class="card">
         <h3>🤝 Cuentas con mamá</h3>
@@ -318,7 +319,7 @@
       </div>
       <div class="card">
         <h3>📈 Rendimiento del mes</h3>
-        <input type="number" id="rendMes" placeholder="Rendimiento total del mes" onchange="setRendMes(this.value)">
+        <input type="number" id="rendMes" placeholder="Rendimiento que te dan al mes" onchange="setRendMes(this.value)">
         <div id="rendMesNota" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
       </div>
       <div class="card">
@@ -329,6 +330,15 @@
 
     <!-- RENDIMIENTO -->
     <div class="tab" id="tab-rendim">
+      <div class="card">
+        <h3>⏱️ Rendimiento en tiempo real</h3>
+        <div class="grid2">
+          <div class="stat"><div class="v" id="rendHoy" style="font-size:19px">$0</div><div class="l">Ganado hasta hoy</div></div>
+          <div class="stat"><div class="v" id="rendDiario" style="font-size:19px">$0</div><div class="l">Por día</div></div>
+        </div>
+        <div class="msi-progress" style="margin-top:10px"><div class="msi-fill" id="rendProgBar" style="width:0%;background:var(--green)"></div></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px" id="rendProgreso"></div>
+      </div>
       <div class="card">
         <h3>🗓️ Elige un mes</h3>
         <div id="calRend" class="month-cal"></div>
@@ -562,6 +572,21 @@ function currentMonth(){ return state.months.find(m=>m.id===state.current) || st
 function invSelMonth(){ const id=state.config&&state.config.invCalMonth; return state.months.find(m=>m.id===id)||currentMonth(); }
 function selectInvMonth(id){ if(!state.config) state.config={}; state.config.invCalMonth=id; saveState(); renderAll(); }
 function weeksInMonth(id){ return Math.ceil(daysInMonth(id)/7); }
+function diasTranscurridos(m){
+  const dim=daysInMonth(m.id);
+  const ahora=new Date();
+  const actual=ahora.getFullYear()+"-"+String(ahora.getMonth()+1).padStart(2,"0");
+  if(m.id<actual) return dim;
+  if(m.id>actual) return 0;
+  return Math.min(dim,ahora.getDate());
+}
+function rendMensual(m){
+  if(Array.isArray(m.rendimientoSemanas)&&m.rendimientoSemanas.length)
+    return m.rendimientoSemanas.reduce((s,x)=>s+(Number(x)||0),0);
+  return Number(m.inversion&&m.inversion.rendimiento)||0;
+}
+function rendDiario(m){ return rendMensual(m)/Math.max(1,daysInMonth(m.id)); }
+function rendAcumulado(m){ return Math.round(rendDiario(m)*diasTranscurridos(m)*100)/100; }
 function renderMonthCalendars(){
   ["calInv","calRend"].forEach(cid=>{
     const el=document.getElementById(cid); if(!el) return;
@@ -663,7 +688,11 @@ function gastoVariableTotal(m){ return gastoTotal(m,"mama")+gastoTotal(m,"yo")+d
 function gastoMamaTotal(m){ return deudaMamaDelMes(m.id)+gastoTotal(m,"mama"); }
 function totalSaved(){
   const base = (state.config && state.config.savedBase) ? state.config.savedBase : 0;
-  return base + state.months.reduce((s,m)=>s+(m.inversion.q1||0)+(m.inversion.q2||0)+(m.inversion.rendimiento||0),0);
+  const actual=currentMonth()&&currentMonth().id;
+  return base + state.months.reduce((s,m)=>{
+    const r=(m.id===actual)?rendAcumulado(m):rendMensual(m);
+    return s+(m.inversion.q1||0)+(m.inversion.q2||0)+r;
+  },0);
 }
 
 function renderAlerts(){
@@ -696,6 +725,7 @@ function renderResumen(){
   const prev=prevMonthId(m.id)?state.months.find(x=>x.id===prevMonthId(m.id)):null;
   renderCompare("cmpGasto", prev? (prevGasto(prev)):null, varTotal, true);
   renderCompare("cmpInv", prev? ((prev.inversion.q1||0)+(prev.inversion.q2||0)):null, inv, false);
+  const rr=document.getElementById("resRendHoy"); if(rr) rr.textContent="$"+fmt(rendAcumulado(currentMonth()));
   renderCompare("cmpRend", prev? (prev.inversion.rendimiento||0):null, m.inversion.rendimiento||0, false);
   document.getElementById("metaMini").innerHTML="Saldo: $"+fmt(totalSaved())+" · "+(totalSaved()/META*100).toFixed(2)+"% del millón";
 }
@@ -963,7 +993,8 @@ function renderGastos(){
 function renderInversion(){
   const m=invSelMonth();
   const ml=document.getElementById("invMesLbl"); if(ml) ml.textContent="💰 Aportaciones de "+m.label;
-  const rn=document.getElementById("rendMesNota"); if(rn) rn.textContent="Se reparte entre las "+weeksInMonth(m.id)+" semanas del mes. Total: $"+fmt(m.inversion.rendimiento||0);
+  const mensual=rendMensual(m);
+  const rn=document.getElementById("rendMesNota"); if(rn) rn.textContent="Se reparte entre las "+weeksInMonth(m.id)+" semanas · Total: $"+fmt(mensual)+" · Ganado hasta hoy: $"+fmt(rendAcumulado(m));
   document.getElementById("q1").value=m.inversion.q1||0;
   document.getElementById("q2").value=m.inversion.q2||0;
   document.getElementById("rendMes").value=m.inversion.rendimiento||0;
@@ -996,7 +1027,7 @@ function drawMetaChart(){
   const vals=[base];
   let cum=base;
   state.months.forEach(m=>{
-    cum += (m.inversion.q1||0)+(m.inversion.q2||0)+(m.inversion.rendimiento||0);
+    cum += (m.inversion.q1||0)+(m.inversion.q2||0)+((m.id===(currentMonth()&&currentMonth().id))?rendAcumulado(m):rendMensual(m));
     labels.push(m.label.split(" ")[0].slice(0,3));
     vals.push(cum);
   });
@@ -1026,6 +1057,14 @@ function renderRendim(){
     grid.appendChild(div);
   });
   document.getElementById("rendTotals").innerHTML=`Total del mes: $${fmt(total)} · ${n} semanas · Promedio semanal: $${fmt(n?total/n:0)}`;
+  // acumulación diaria en tiempo real
+  const trans=diasTranscurridos(m), diario=rendDiario(m), acum=rendAcumulado(m);
+  const setE=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+  setE("rendHoy","$"+fmt(acum));
+  setE("rendDiario","$"+fmt(diario));
+  const barra=document.getElementById("rendProgBar"); if(barra) barra.style.width=Math.min(100,total?acum/total*100:0)+"%";
+  const prog=document.getElementById("rendProgreso");
+  if(prog) prog.textContent=`Días: ${trans} de ${dim} · Mensual: $${fmt(total)} · ${m.id===(currentMonth()&&currentMonth().id)?"Sigue acumulándose cada día":"Mes completo"}`;
   const rw=document.getElementById("rendWeeks");
   rw.innerHTML="";
   m.rendimientoSemanas.forEach((v,i)=>{
@@ -1857,7 +1896,8 @@ function init(){
   // saldo exacto: $505,115.66. Se ajusta la base restando lo ya acumulado
   // para que los abonos futuros se sigan sumando encima.
   if(!state.config.savedBaseAjustado){
-    const acum=state.months.reduce((n,m)=>n+(Number(m.inversion?.q1)||0)+(Number(m.inversion?.q2)||0)+(Number(m.inversion?.rendimiento)||0),0);
+    const actual=state.current;
+    const acum=state.months.reduce((n,m)=>n+(Number(m.inversion?.q1)||0)+(Number(m.inversion?.q2)||0)+((m.id===actual)?rendAcumulado(m):rendMensual(m)),0);
     state.config.savedBase=Math.round((505115.66-acum)*100)/100;
     state.config.savedBaseAjustado=true;
   }
