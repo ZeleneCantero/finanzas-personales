@@ -15,13 +15,20 @@
 <style>
   :root{
     --pink:#ec4899; --pink-light:#fce7f3; --pink-dark:#be185d;
-    --bg:#fff7fb; --card:#ffffff; --text:#1f2937; --muted:#6b7280;
-    --green:#10b981; --red:#ef4444; --blue:#3b82f6; --amber:#f59e0b;
+    --bg:#fff7fb; --card:#ffffff; --surface:#ffffff; --surface-2:#fafafa; --line:#f3f4f6;
+    --text:#1f2937; --muted:#6b7280;
+    --green:#10b981; --red:#ef4444; --blue:#3b82f6; --amber:#f59e0b; --purple:#8b5cf6;
+    /* colores semánticos */
+    --ahorro:var(--green); --deuda:var(--red); --proximo:var(--amber); --inversion:var(--blue);
   }
+  .num-pos{color:var(--green)!important}
+  .num-neg{color:var(--red)!important}
+  .num-warn{color:var(--amber)!important}
+  .num-info{color:var(--blue)!important}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
   .app{display:flex;flex-direction:column;height:100vh;height:100dvh}
-  header{background:linear-gradient(135deg,var(--pink),var(--pink-dark));color:#fff;padding:12px 16px;box-shadow:0 2px 12px rgba(236,72,153,.25)}
+  header{background:linear-gradient(135deg,var(--pink),#a855f7 55%,var(--blue));color:#fff;padding:12px 16px;box-shadow:0 2px 12px rgba(139,92,246,.28)}
   header .title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
   header .sub{font-size:12px;opacity:.9;margin-top:2px}
   .progress-wrap{margin-top:10px;position:relative}
@@ -32,7 +39,7 @@
   main{flex:1;overflow-y:auto;padding:12px 12px 80px;-webkit-overflow-scrolling:touch}
   .card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
   .card h3{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--pink-dark)}
-  .row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid #f3f4f6}
+  .row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
   .row:last-child{border-bottom:none}
   .pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
   .pill-green{background:#d1fae5;color:#065f46}
@@ -53,17 +60,17 @@
   .stat{background:var(--pink-light);border-radius:12px;padding:10px;text-align:center}
   .stat .v{font-size:18px;font-weight:800;color:var(--pink-dark)}
   .stat .l{font-size:11px;color:var(--muted);margin-top:2px}
-  .msi-item{background:#fafafa;border-radius:12px;padding:10px;margin-bottom:8px}
+  .msi-item{background:var(--surface-2);border-radius:12px;padding:10px;margin-bottom:8px}
   .msi-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
   .msi-desc{font-size:13px;font-weight:600}
   .msi-tarjeta{font-size:11px;color:var(--muted)}
   .msi-progress{height:6px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin:6px 0}
   .msi-fill{height:100%;background:var(--pink);border-radius:99px}
   .msi-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
-  .chatbox{background:#f9fafb;border-radius:12px;padding:10px;max-height:260px;overflow-y:auto}
+  .chatbox{background:var(--surface-2);border-radius:12px;padding:10px;max-height:260px;overflow-y:auto}
   .chatmsg{margin-bottom:8px;font-size:13px}
   .chatmsg .who{font-weight:700;color:var(--pink-dark);font-size:11px}
-  .chatmsg .txt{background:#fff;padding:6px 10px;border-radius:10px;margin-top:2px;display:inline-block;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .chatmsg .txt{background:var(--surface);padding:6px 10px;border-radius:10px;margin-top:2px;display:inline-block;box-shadow:0 1px 2px rgba(0,0,0,.05)}
   .bottomnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e7eb;display:flex;justify-content:space-around;padding:6px 0 10px;box-shadow:0 -2px 12px rgba(0,0,0,.06);z-index:50}
   .navbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--muted);background:none;padding:4px}
   .navbtn.active{color:var(--pink);font-weight:700;border-top:2px solid var(--pink)}
@@ -76,12 +83,12 @@
   .sync-status.ok{background:rgba(16,185,129,.12);color:var(--green)}
   .sync-status.warn{background:rgba(245,158,11,.14);color:var(--amber)}
   .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
-  .modal{background:#fff;border-radius:16px;padding:16px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto}
+  .modal{background:var(--card);border-radius:16px;padding:16px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto}
   .arrow-up{color:var(--green);font-weight:700}
   .arrow-down{color:var(--red);font-weight:700}
   .compare{display:flex;gap:6px;align-items:center;font-size:12px}
   table{width:100%;border-collapse:collapse;font-size:12px}
-  th,td{padding:6px;text-align:left;border-bottom:1px solid #f3f4f6}
+  th,td{padding:6px;text-align:left;border-bottom:1px solid var(--line)}
   th{color:var(--muted);font-weight:600}
   .simtable th,.simtable td{font-size:11px;padding:5px 3px;white-space:nowrap}
   .simtable th:not(:first-child),.simtable td:not(:first-child){text-align:right}
@@ -127,8 +134,16 @@
   .alert-danger{background:#fee2e2;color:#991b1b;border-left:4px solid #ef4444}
   .alert-warn{background:#fef3c7;color:#92400e;border-left:4px solid #f59e0b}
   .alert-info{background:#dbeafe;color:#1e40af;border-left:4px solid #3b82f6}
-  body.dark{--bg:#1a1a2e;--card:#16213e;--text:#e5e7eb;--muted:#9ca3af;--pink-light:#3b1d3a}
-  body.dark header{background:linear-gradient(135deg,#be185d,#831843)}
+  body.dark{--bg:#1a1a2e;--card:#16213e;--surface:#16213e;--surface-2:#1e293b;--line:#0f172a;--text:#e5e7eb;--muted:#9ca3af;--pink-light:#3b1d3a}
+  body.dark header{background:linear-gradient(135deg,#be185d,#6d28d9 55%,#1d4ed8)}
+  @media (prefers-color-scheme: dark){
+    body:not(.light){--bg:#1a1a2e;--card:#16213e;--surface:#16213e;--surface-2:#1e293b;--line:#0f172a;--text:#e5e7eb;--muted:#9ca3af;--pink-light:#3b1d3a}
+    body:not(.light) header{background:linear-gradient(135deg,#be185d,#6d28d9 55%,#1d4ed8)}
+    body:not(.light) .bottomnav{background:#16213e;border-color:#334155}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  }
   body.dark input,body.dark select,body.dark textarea{background:#0f172a;color:#e5e7eb;border-color:#334155}
   body.dark .modal{background:#16213e;color:#e5e7eb}
   body.dark .msi-item{background:#1e293b}
@@ -501,6 +516,26 @@ const META = 1000000;
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function fmt(n){ const v=Number(n)||0; return v.toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmtI(n){ const v=Number(n)||0; return v.toLocaleString("es-MX"); }
+const money2=v=>"$"+fmt(v), money0=v=>"$"+fmtI(v);
+const REDUCE_MOTION = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+function haptic(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms==null?10:ms); }catch(e){} }
+// Cuenta de un valor a otro solo cuando cambia de verdad (evita reanimar en cada sync)
+function setAnimated(el,value,fmtFn){
+  if(!el) return;
+  const v=Number(value)||0, prev=el.dataset.animVal;
+  if(prev==null || REDUCE_MOTION || Math.abs(v-Number(prev))<0.005){
+    el.dataset.animVal=String(v); el.textContent=fmtFn(v); return;
+  }
+  const from=Number(prev), t0=performance.now(), dur=450;
+  function step(now){
+    const t=Math.min(1,(now-t0)/dur), ease=1-Math.pow(1-t,3);
+    const cur=from+(v-from)*ease;
+    el.textContent=fmtFn(cur); el.dataset.animVal=String(cur);
+    if(t<1) requestAnimationFrame(step);
+    else { el.textContent=fmtFn(v); el.dataset.animVal=String(v); }
+  }
+  requestAnimationFrame(step);
+}
 function monthKey(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
 function monthLabel(k){ const [y,m]=k.split("-"); const names=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]; return names[+m-1]+" "+y; }
 function todayKey(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
@@ -660,7 +695,7 @@ function showTab(name){
     importFromBot(true).catch(()=>{});
   }
 }
-function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+function toast(msg){ haptic(10); const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
 
 // ---------- RENDER ----------
 function renderAll(){ applyCollapsed(); renderMonthCalendars(); renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderCuentasMama(); renderInversion(); renderRendim(); renderSimulacion(); renderMeta(); renderMas(); renderAlerts(); }
@@ -688,14 +723,15 @@ function renderHeader(){
   const pct=Math.min(100, (saldo/META)*100);
   document.getElementById("progressFill").style.width=pct+"%";
   // whale follows the fill's right edge via CSS (left:100%)
-  document.getElementById("progLeft").textContent="$"+fmtI(saldo);
+  setAnimated(document.getElementById("progLeft"),saldo,money0);
   document.getElementById("headerSub").textContent=m.label;
   document.getElementById("mesLabel").textContent=m.label;
 }
 
+// Solo pagos pendientes: un MSI liquidado deja de contar como deuda.
 function msiTotal(m,tarjeta){
-  const items=tarjeta?m.msi.filter(x=>x.tarjeta===tarjeta):m.msi;
-  return items.reduce((s,x)=>s+x.monto,0);
+  const items=((m&&m.msi)||[]).filter(x=>!(x.pago>=x.total)&&!x.liquidado && (!tarjeta||x.tarjeta===tarjeta));
+  return items.reduce((s,x)=>s+(Number(x.monto)||0),0);
 }
 function msiPendTotal(m){
   return (m.msi||[]).filter(x=>!(x.pago>=x.total)&&!x.liquidado).reduce((s,x)=>s+(Number(x.monto)||0),0);
@@ -704,9 +740,7 @@ function msiMamaPendTotal(m){
   return ((m&&m.deudaMama)||[]).filter(x=>!(x.pago>=x.total)&&!x.liquidado).reduce((s,x)=>s+(Number(x.monto)||0),0);
 }
 function fijosTotal(m){
-  const msi=m.msi.reduce((s,x)=>s+x.monto,0);
-  const deuda=m.deudaMama.reduce((s,x)=>s+x.monto,0);
-  return msi+deuda+(m.apoyo||0);
+  return msiPendTotal(m)+msiMamaPendTotal(m)+(Number(m.apoyo)||0);
 }
 // Gasto real (lo que ella gasta), sin las deudas importadas de Telegram.
 function gastoTotal(m,who){
@@ -757,17 +791,23 @@ function renderAlerts(){
 }
 function renderResumen(){
   const m=currentMonth();
-  document.getElementById("stBBVA").textContent="$"+fmt(msiTotal(m,"BBVA"));
-  document.getElementById("stFijos").textContent="$"+fmt(fijosTotal(m));
-  const varTotal=gastoVariableTotal(m);
-  document.getElementById("stVar").textContent="$"+fmt(varTotal);
+  const bbva=msiTotal(m,"BBVA"), fijos=fijosTotal(m), varTotal=gastoVariableTotal(m);
   const inv=(m.inversion.q1||0)+(m.inversion.q2||0);
-  document.getElementById("stInv").textContent="$"+fmt(inv);
+  setAnimated(document.getElementById("stBBVA"),bbva,money2);
+  setAnimated(document.getElementById("stFijos"),fijos,money2);
+  setAnimated(document.getElementById("stVar"),varTotal,money2);
+  setAnimated(document.getElementById("stInv"),inv,money2);
+  const cBBVA=document.getElementById("stBBVA"), cFijos=document.getElementById("stFijos");
+  const cVar=document.getElementById("stVar"), cInv=document.getElementById("stInv");
+  if(cBBVA) cBBVA.style.color="var(--deuda)";
+  if(cFijos) cFijos.style.color="var(--proximo)";
+  if(cVar) cVar.style.color=varTotal>0?"var(--deuda)":"var(--ahorro)";
+  if(cInv) cInv.style.color="var(--inversion)";
   // compare
   const prev=prevMonthId(m.id)?state.months.find(x=>x.id===prevMonthId(m.id)):null;
   renderCompare("cmpGasto", prev? (prevGasto(prev)):null, varTotal, true);
   renderCompare("cmpInv", prev? ((prev.inversion.q1||0)+(prev.inversion.q2||0)):null, inv, false);
-  const rr=document.getElementById("resRendHoy"); if(rr) rr.textContent="$"+fmt(rendAcumulado(currentMonth()));
+  const rr=document.getElementById("resRendHoy"); if(rr){ rr.style.color="var(--ahorro)"; setAnimated(rr,rendAcumulado(currentMonth()),money2); }
   renderCompare("cmpRend", prev? (prev.inversion.rendimiento||0):null, m.inversion.rendimiento||0, false);
   document.getElementById("metaMini").innerHTML="Saldo: $"+fmt(totalSaved())+" · "+(totalSaved()/META*100).toFixed(2)+"% del millón";
 }
@@ -824,7 +864,7 @@ function renderDeudas(){
     const cards=["BBVA","Mifel","MercadoPago"];
     let grand=0;
     cards.forEach(c=>{
-      const sum=m.msi.filter(x=>x.tarjeta===c).reduce((s,x)=>s+x.monto,0);
+      const sum=m.msi.filter(x=>x.tarjeta===c && !(x.pago>=x.total) && !x.liquidado).reduce((s,x)=>s+(Number(x.monto)||0),0);
       grand+=sum;
       if(sum>0){
         const div=document.createElement("div");
@@ -949,6 +989,7 @@ function renderCuentasMama(){
   set("resMeDeben","$"+fmt(c.totalMeDeben));
   set("resNetoLbl", c.neto>=0 ? "Este mes le das" : "Este mes te debe");
   set("resNeto","$"+fmt(Math.abs(c.neto)));
+  const rn=document.getElementById("resNeto"); if(rn) rn.style.color=c.neto>=0?"var(--ahorro)":"var(--deuda)";
   // Apartado: pagos de mamá + mis MSI = total a pagar al mes
   const m=currentMonth();
   const apNeto=Math.abs(c.neto), apMsi=msiPendTotal(m), apGastos=gastoTotal(m,"yo");
@@ -957,6 +998,7 @@ function renderCuentasMama(){
   set("apApoyo","$"+fmt(c.apoyo));
   set("apMeDeben","−$"+fmt(c.totalMeDeben));
   set("apNeto","$"+fmt(apNeto));
+  const an=document.getElementById("apNeto"); if(an) an.style.color=c.neto>=0?"var(--ahorro)":"var(--deuda)";
   set("apMsi","$"+fmt(apMsi));
   set("apGastos","$"+fmt(apGastos));
   set("apTotal","$"+fmt(apNeto+apMsi+apGastos));
@@ -1191,15 +1233,27 @@ function renderSimulacion(){
   const maxRest=msi.concat(tel).reduce((s,x)=>Math.max(s,(Number(x.total)||0)-(Number(x.pago)||0)),0);
   const lastDebt=maxRest?addMonthsKey(start,maxRest):"";
   const tot=document.getElementById("simTotales");
-  if(tot) tot.innerHTML=
-    `<div class="stat"><div class="v">$${fmtI(restante)}</div><div class="l">Deuda por pagar</div></div>`+
-    `<div class="stat"><div class="v">$${fmtI(sumApoyo)}</div><div class="l">Apoyo en el periodo</div></div>`+
-    `<div class="stat"><div class="v">${lastDebt?simShort(lastDebt):"¡Listo!"}</div><div class="l">Último pago de deuda</div></div>`;
+  if(tot){
+    if(!tot.dataset.ready){
+      tot.innerHTML=
+        `<div class="stat"><div class="v" id="simRestante">$0</div><div class="l">Deuda por pagar</div></div>`+
+        `<div class="stat"><div class="v" id="simApoyoTotal">$0</div><div class="l">Apoyo en el periodo</div></div>`+
+        `<div class="stat"><div class="v" id="simLast">—</div><div class="l">Último pago de deuda</div></div>`;
+      tot.dataset.ready="1";
+    }
+    const sr=document.getElementById("simRestante"), sa=document.getElementById("simApoyoTotal"), sl=document.getElementById("simLast");
+    if(sr) sr.style.color="var(--deuda)";
+    if(sa) sa.style.color="var(--ahorro)";
+    setAnimated(sr,restante,money0);
+    setAnimated(sa,sumApoyo,money0);
+    if(sl) sl.textContent=lastDebt?simShort(lastDebt):"¡Listo!";
+  }
   const tbl=document.getElementById("simTabla");
   if(tbl){
+    const netoCls=v=>v>=0?"num-neg":"num-pos";
     tbl.innerHTML="<thead><tr><th>Mes</th><th>MSI</th><th>Tel/tele</th><th>Apoyo</th><th>Deuda</th><th>Neto</th></tr></thead><tbody>"+
-      rows.map(r=>`<tr><td>${simShort(r.k)}</td><td>$${fmtI(r.msi)}</td><td>$${fmtI(r.tel)}</td><td>$${fmtI(r.apo)}</td><td><b>$${fmtI(r.deuda)}</b></td><td>${simMoney(r.neto)}</td></tr>`).join("")+
-      `</tbody><tfoot><tr><td><b>Total</b></td><td></td><td></td><td><b>$${fmtI(sumApoyo)}</b></td><td><b>$${fmtI(sumDeuda)}</b></td><td><b>${simMoney(sumDeuda-sumApoyo)}</b></td></tr></tfoot>`;
+      rows.map(r=>`<tr><td>${simShort(r.k)}</td><td>$${fmtI(r.msi)}</td><td>$${fmtI(r.tel)}</td><td class="num-pos">$${fmtI(r.apo)}</td><td><b>$${fmtI(r.deuda)}</b></td><td><b class="${netoCls(r.neto)}">${simMoney(r.neto)}</b></td></tr>`).join("")+
+      `</tbody><tfoot><tr><td><b>Total</b></td><td></td><td></td><td><b class="num-pos">$${fmtI(sumApoyo)}</b></td><td><b>$${fmtI(sumDeuda)}</b></td><td><b class="${netoCls(sumDeuda-sumApoyo)}">${simMoney(sumDeuda-sumApoyo)}</b></td></tr></tfoot>`;
   }
   const det=document.getElementById("simDetalle");
   if(det){
@@ -1235,7 +1289,7 @@ function buildResumenTexto(m){
   t+=`Saldo ahorrado: $${fmt(totalSaved())} (${(totalSaved()/META*100).toFixed(2)}%)\n`;
   t+=`\nMSI:\n`;
   m.msi.forEach(x=>t+=`- ${x.tarjeta} ${x.desc}: $${fmt(x.monto)} (${fmtI(x.pago)}/${fmtI(x.total)})\n`);
-  t+=`Deuda mamá: $${fmt(m.deudaMama.reduce((s,x)=>s+x.monto,0))}\n`;
+  t+=`Deuda mamá: $${fmt(msiMamaPendTotal(m))}\n`;
   t+=`Apoyo: $${fmt(m.apoyo)}\n`;
   return t;
 }
@@ -1617,9 +1671,9 @@ function pdfMensual(){
   line("Saldo ahorrado: $"+fmt(totalSaved())+" ("+(totalSaved()/META*100).toFixed(2)+"%)",{gap:8});
   line("Pagos por tarjeta",{bold:true,gap:6});
   ["BBVA","Mifel","MercadoPago"].forEach(t=>{
-    const its=m.msi.filter(x=>x.tarjeta===t);
+    const its=m.msi.filter(x=>x.tarjeta===t && !(x.pago>=x.total) && !x.liquidado);
     if(!its.length) return;
-    line(t+": $"+fmt(its.reduce((s,x)=>s+x.monto,0)),{bold:true});
+    line(t+": $"+fmt(its.reduce((s,x)=>s+(Number(x.monto)||0),0)),{bold:true});
     its.forEach(x=>line("  - "+x.desc+": $"+fmt(x.monto)+" ("+x.pago+"/"+x.total+")"));
   });
   line("Gasto variable",{bold:true,gap:6});
@@ -1656,11 +1710,11 @@ function pdfMama(){
   const line=(t,opts={})=>{ doc.setFontSize(opts.size||11); if(opts.bold) doc.setFont(undefined,"bold"); else doc.setFont(undefined,"normal"); doc.text(t,14,y); y+=opts.gap||6; };
   line("CUENTA CON MAMÁ - "+m.label,{size:16,bold:true,gap:8});
   m.deudaMama.forEach(x=>{ line(x.desc+": $"+fmt(x.monto)+" ("+fmtI(x.pago)+"/"+fmtI(x.total)+")",{bold:true}); });
-  line("Total que le debes: $"+fmt(m.deudaMama.reduce((s,x)=>s+x.monto,0)),{bold:true,gap:8});
+  line("Total que le debes: $"+fmt(msiMamaPendTotal(m)),{bold:true,gap:8});
   line("Lo descontado / pagado por ti (gasto variable compartido): $"+fmt(gastoTotal(m,"mama")),{gap:6});
   m.gasto.mama.items.forEach(x=>line("  - "+x.fecha+" "+x.desc+": $"+fmt(x.monto)));
   line("Apoyo fijo mensual: $"+fmt(m.apoyo),{gap:8});
-  line("Transferencia sugerida: $"+fmt(m.deudaMama.reduce((s,x)=>s+x.monto,0)),{bold:true});
+  line("Transferencia sugerida: $"+fmt(msiMamaPendTotal(m)),{bold:true});
   doc.save("cuenta-mama-"+m.id+".pdf");
   toast("PDF mamá generado");
 }
@@ -1975,11 +2029,18 @@ function renderSyncStatus(){
 }
 
 function toggleDark(){
-  document.body.classList.toggle("dark");
-  state.config.dark= document.body.classList.contains("dark");
-  saveState(); toast(state.config.dark?"Modo oscuro activado":"Modo claro activado");
+  const on=!document.body.classList.contains("dark");
+  document.body.classList.toggle("dark",on);
+  document.body.classList.toggle("light",!on);
+  state.config.dark=on;
+  saveState(); toast(on?"Modo oscuro activado":"Modo claro activado");
 }
-function applyDark(){ if(state.config && state.config.dark) document.body.classList.add("dark"); }
+function applyDark(){
+  const pref=state.config && state.config.dark;
+  document.body.classList.toggle("dark",pref===true);
+  document.body.classList.toggle("light",pref===false);
+  // si no hay preferencia guardada, se sigue el tema del sistema
+}
 function toggleCompact(){
   document.body.classList.toggle("compact");
   state.config.compact= document.body.classList.contains("compact");
@@ -1999,6 +2060,7 @@ function renderBotStatus(){
   else { el.textContent="⚠️ No configurado. Pulsa \"Configurar bot\" para conectar."; el.style.color="var(--amber)"; }
 }
 function launchConfetti(){
+  haptic(30);
   const canvas=document.getElementById("confettiCanvas");
   if(!canvas) return;
   canvas.style.display="block";
@@ -2178,7 +2240,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=11").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=12").catch(()=>{}); }
 </script>
 </body>
 </html>
