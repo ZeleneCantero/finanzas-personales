@@ -4,19 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Finanzas 🐳</title>
-<script>
-(function(){
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(function(regs){
-      var old = regs.filter(function(r){ return r.active && r.active.scriptURL && r.active.scriptURL.endsWith('/sw.js'); });
-      if(old.length){
-        old.forEach(function(r){ r.unregister(); });
-        if(!sessionStorage.getItem('sw_cleaned')){ sessionStorage.setItem('sw_cleaned','1'); location.reload(); }
-      }
-    }).catch(function(){});
-  }
-})();
-</script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ec4899">
 <meta name="apple-mobile-web-app-capable" content="yes">
