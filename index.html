@@ -1177,7 +1177,7 @@ function renderSimulacion(){
   const n=parseInt(selN&&selN.value,10)||12;
   const conApoyo=!selA || selA.value!=="0";
   const start=(m&&m.id)||monthKey(new Date());
-  let sumDeuda=0, sumApoyo=0, lastDebt="";
+  let sumDeuda=0, sumApoyo=0;
   const rows=[];
   for(let i=1;i<=n;i++){
     const k=addMonthsKey(start,i);
@@ -1185,10 +1185,11 @@ function renderSimulacion(){
     const st=tel.filter(x=>(Number(x.pago)||0)+i<=(Number(x.total)||0)).reduce((s,x)=>s+(Number(x.monto)||0),0);
     const sa=conApoyo?apo:0;
     sumDeuda+=sm+st; sumApoyo+=sa;
-    if(sm+st>0) lastDebt=k;
     rows.push({k,msi:sm,tel:st,apo:sa,deuda:sm+st,neto:sm+st-sa});
   }
   const restante=msi.concat(tel).reduce((s,x)=>s+(Number(x.monto)||0)*((Number(x.total)||0)-(Number(x.pago)||0)),0);
+  const maxRest=msi.concat(tel).reduce((s,x)=>Math.max(s,(Number(x.total)||0)-(Number(x.pago)||0)),0);
+  const lastDebt=maxRest?addMonthsKey(start,maxRest):"";
   const tot=document.getElementById("simTotales");
   if(tot) tot.innerHTML=
     `<div class="stat"><div class="v">$${fmtI(restante)}</div><div class="l">Deuda por pagar</div></div>`+
