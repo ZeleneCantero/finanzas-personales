@@ -1192,7 +1192,7 @@ async function syncToBot(){
   const m=currentMonth();
   const summary=buildResumenTexto(m);
   try{
-    await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama})});
+    await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama,apoyo:m.apoyo})});
     toast("Sincronizado");
   }catch(e){ toast("Error de red"); }
 }
