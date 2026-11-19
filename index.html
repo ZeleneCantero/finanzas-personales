@@ -72,6 +72,9 @@
   .tab{display:none}
   .tab.active{display:block}
   .hidden{display:none !important}
+  .sync-status{font-size:12px;padding:6px 10px;border-radius:8px;margin:0 0 10px;background:rgba(148,163,184,.14);color:var(--muted)}
+  .sync-status.ok{background:rgba(16,185,129,.12);color:var(--green)}
+  .sync-status.warn{background:rgba(245,158,11,.14);color:var(--amber)}
   .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
   .modal{background:#fff;border-radius:16px;padding:16px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto}
   .arrow-up{color:var(--green);font-weight:700}
@@ -146,6 +149,7 @@
   <main id="main">
     <!-- RESUMEN -->
     <div class="tab active" id="tab-resumen">
+      <div id="syncStatus" class="sync-status"></div>
       <div id="alertsBanner"></div>
       <div class="card">
         <h3>📅 Mes actual: <span id="mesLabel"></span></h3>
@@ -283,6 +287,14 @@
       <div class="card">
         <h3>📈 Progreso hacia el millón</h3>
         <div class="bar-chart"><canvas id="metaChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>➕ Abonar al ahorro</h3>
+        <div class="grid2">
+          <input id="abonoInput" type="number" inputmode="decimal" placeholder="monto (ej: 5000)">
+          <button class="btn" onclick="addAbono()">Abonar</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">Se suma al ahorro de este mes y avanza la meta.</div>
       </div>
       <div class="card">
         <h3>⏱️ Tiempo estimado</h3>
@@ -487,7 +499,7 @@ function showTab(name){
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
 
 // ---------- RENDER ----------
-function renderAll(){ renderHeader(); renderResumen(); renderDeudas(); renderGastos(); renderInversion(); renderRendim(); renderMeta(); renderMas(); renderAlerts(); }
+function renderAll(){ renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderInversion(); renderRendim(); renderMeta(); renderMas(); renderAlerts(); }
 
 function renderHeader(){
   const m=currentMonth();
@@ -869,6 +881,17 @@ function setSavedBase(v){
   saveState(); renderAll();
   toast("Saldo base actualizado");
 }
+function addAbono(){
+  const el=document.getElementById("abonoInput");
+  const v=parseFloat(el.value);
+  if(!v||v<=0){ toast("Monto inválido"); return; }
+  const m=currentMonth();
+  m.inversion.q1=(m.inversion.q1||0)+v;
+  el.value="";
+  saveState(); renderAll();
+  toast("Abono de $"+fmt(v)+" registrado");
+  syncToBot(true).catch(()=>{});
+}
 function setBudget(who,v){
   const m=currentMonth();
   m.gasto[who].budget=parseFloat(v)||0;
@@ -1190,29 +1213,105 @@ async function syncToBot(silent){
   const m=currentMonth();
   const summary=buildResumenTexto(m);
   try{
-    await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama,apoyo:m.apoyo,msi:m.msi,gasto:m.gasto})});
+    const r=await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama,apoyo:m.apoyo,msi:m.msi,msiMonth:m.id,gasto:m.gasto})});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    state.config.lastSync=Date.now();
+    state.config.lastSyncError=null;
+    saveState(); renderSyncStatus();
     if(!silent) toast("Sincronizado");
-  }catch(e){ if(!silent) toast("Error de red"); }
+  }catch(e){
+    state.config.lastSyncError=Date.now();
+    saveState(); renderSyncStatus();
+    if(!silent) toast("Error de red");
+  }
 }
+
+// Concilia los movimientos de Telegram con la app: agrega, actualiza y quita los liquidados.
+function reconcileTelegram(ledger){
+  const m=currentMonth();
+  const items=m.gasto.mama.items;
+  let added=0,updated=0,removed=0;
+  const live=new Map(ledger.map(x=>[x.id,x]));
+  const remOf=mv=>Math.max(0,(Number(mv.amount)||0)-(Number(mv.paid)||0));
+
+  for(let i=items.length-1;i>=0;i--){
+    const it=items[i];
+    if(!it.tgId) continue;
+    const mv=live.get(it.tgId);
+    if(!mv || mv.settled || remOf(mv)<=0){ items.splice(i,1); removed++; continue; }
+    const rem=remOf(mv);
+    if(Math.abs((Number(it.monto)||0)-rem)>0.004 || it.desc!==mv.desc){
+      it.monto=rem; it.desc=mv.desc; updated++;
+    }
+  }
+
+  ledger.forEach(mv=>{
+    const rem=remOf(mv);
+    if(mv.settled || rem<=0) return;
+    if(items.some(it=>it.tgId===mv.id)) return;
+    const legacy=items.find(it=>!it.tgId && it.desc===mv.desc && Math.abs((Number(it.monto)||0)-rem)<0.004);
+    if(legacy){ legacy.tgId=mv.id; return; }
+    items.unshift({id:uid(), tgId:mv.id, desc:mv.desc, monto:rem, fecha:mv.date.slice(0,10), cat:"Otro", kind:mv.kind||"cobro"});
+    added++;
+  });
+
+  if(added||updated||removed) saveState();
+  return {added,updated,removed};
+}
+
 async function importFromBot(silent){
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,""); const token=(state.config?.botToken||"").trim();
   if(!url||!token){ if(!silent) toast("Falta URL o token"); return; }
   try{
     const r=await fetch(url+"/api/ledger",{headers:{"X-Auth-Token":token}});
+    if(!r.ok) throw new Error("HTTP "+r.status);
     const {ledger}=await r.json();
     if(!Array.isArray(ledger)){ if(!silent) toast("Sin datos"); return; }
-    if(!state.config.importedIds) state.config.importedIds=[];
-    const m=currentMonth();
-    let added=0;
-    ledger.forEach(mv=>{
-      if(state.config.importedIds.includes(mv.id)) return;
-      m.gasto.mama.items.unshift({id:uid(), desc:mv.desc, monto:mv.amount, fecha:mv.date.slice(0,10), cat:"Otro", kind:mv.kind||"cobro"});
-      state.config.importedIds.push(mv.id);
-      added++;
-    });
-    saveState(); renderAll();
-    if(!silent) toast(added>0?`Importados ${added} cobros de Telegram`:"Sin cobros nuevos");
-  }catch(e){ console.error(e); if(!silent) toast("Error: "+(e.message||"red")); }
+    const res=reconcileTelegram(ledger);
+    state.config.lastSync=Date.now();
+    state.config.lastSyncError=null;
+    saveState(); renderAll(); renderSyncStatus();
+    if(!silent){
+      const parts=[];
+      if(res.added) parts.push(`${res.added} nuevo(s)`);
+      if(res.updated) parts.push(`${res.updated} actualizado(s)`);
+      if(res.removed) parts.push(`${res.removed} liquidado(s)`);
+      toast(parts.length?`Telegram: ${parts.join(", ")}`:"Sin cambios de Telegram");
+    }
+  }catch(e){
+    console.error(e);
+    state.config.lastSyncError=Date.now();
+    saveState(); renderSyncStatus();
+    if(!silent) toast("Error: "+(e.message||"red"));
+  }
+}
+
+function timeAgo(ts){
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60) return "hace un momento";
+  if(s<3600) return "hace "+Math.floor(s/60)+" min";
+  if(s<86400) return "hace "+Math.floor(s/3600)+" h";
+  return "hace "+Math.floor(s/86400)+" d";
+}
+function renderSyncStatus(){
+  const el=document.getElementById("syncStatus"); if(!el) return;
+  const url=(state.config?.botUrl||"").trim();
+  const token=(state.config?.botToken||"").trim();
+  if(!url||!token){
+    el.textContent="⚠️ Telegram no conectado · configura en Más → Sincronización";
+    el.className="sync-status warn";
+    return;
+  }
+  const last=state.config.lastSync||0;
+  const err=state.config.lastSyncError||0;
+  if(err && err>last){
+    el.textContent="⚠️ Sin conexión con Telegram · mostrando últimos datos guardados";
+    el.className="sync-status warn";
+    return;
+  }
+  if(!last){ el.textContent="⏳ Sincronizando…"; el.className="sync-status"; return; }
+  el.textContent="✅ Sincronizado "+timeAgo(last);
+  el.className="sync-status ok";
 }
 
 function toggleDark(){
