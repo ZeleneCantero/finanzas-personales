@@ -88,7 +88,14 @@
   .hito.done{background:#d1fae5;color:#065f46}
   .hito.next{background:var(--pink-light);color:var(--pink-dark);box-shadow:0 0 0 2px var(--pink)}
   .bar-chart{position:relative;height:180px}
-  .week-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .week-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:6px}
+  .month-cal{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .month-chip{background:var(--pink-light);border-radius:8px;padding:6px 4px;text-align:center;font-size:12px;cursor:pointer;border:2px solid transparent}
+  .month-chip.active{background:var(--pink);color:#fff;font-weight:700}
+  .month-chip small{display:block;font-size:10px;opacity:.85}
+  .collapse-head{cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center}
+  .collapse-head .caret{font-size:12px;color:var(--muted);transition:transform .2s;display:inline-block}
+  .collapse-body.collapsed{display:none}
   .week-cell{background:var(--pink-light);border-radius:10px;padding:8px;text-align:center}
   .week-cell .w{font-size:11px;color:var(--muted)}
   .week-cell .a{font-size:14px;font-weight:700;color:var(--pink-dark)}
@@ -205,34 +212,42 @@
     <!-- DEUDAS -->
     <div class="tab" id="tab-deudas">
       <div class="card">
-        <h3>🔍 Filtro</h3>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" id="fltPend" onclick="setDeudaFilter('pendientes')">Pendientes</button>
-          <button class="btn btn-ghost btn-sm" id="fltLiq" onclick="setDeudaFilter('liquidados')">Liquidados</button>
-          <button class="btn btn-ghost btn-sm" id="fltAll" onclick="setDeudaFilter('todos')">Todos</button>
+        <h3 class="collapse-head" onclick="toggleSec('secFiltro')">🔍 Filtro <span class="caret">▾</span></h3>
+        <div class="collapse-body" data-key="secFiltro">
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" id="fltPend" onclick="setDeudaFilter('pendientes')">Pendientes</button>
+            <button class="btn btn-ghost btn-sm" id="fltLiq" onclick="setDeudaFilter('liquidados')">Liquidados</button>
+            <button class="btn btn-ghost btn-sm" id="fltAll" onclick="setDeudaFilter('todos')">Todos</button>
+          </div>
         </div>
       </div>
       <div class="card">
-        <h3>💳 Total MSI por tarjeta</h3>
-        <div id="msiTotales"></div>
+        <h3 class="collapse-head" onclick="toggleSec('secTotales')">💳 Total MSI por tarjeta <span class="caret">▾</span></h3>
+        <div class="collapse-body" data-key="secTotales"><div id="msiTotales"></div></div>
       </div>
       <div class="card">
-        <h3>💳 MSI por tarjeta</h3>
-        <div id="msiList"></div>
-        <button class="btn btn-ghost btn-sm" onclick="openMsiModal()">+ Agregar MSI</button>
-      </div>
-      <div class="card">
-        <h3>👩 Cuentas con mamá</h3>
-        <div id="mamaList"></div>
-        <div class="row"><span>Total que le debes</span><span id="mamaTotal" style="font-weight:700">$0</span></div>
-        <div class="grid2" style="margin-top:8px">
-          <button class="btn btn-ghost btn-sm" onclick="openMamaModal()">+ Movimiento</button>
-          <button class="btn btn-ghost btn-sm" onclick="pdfMama()">📄 PDF para mamá</button>
+        <h3 class="collapse-head" onclick="toggleSec('secMsi')">💳 MSI por tarjeta <span class="caret">▾</span></h3>
+        <div class="collapse-body" data-key="secMsi">
+          <div id="msiList"></div>
+          <button class="btn btn-ghost btn-sm" onclick="openMsiModal()">+ Agregar MSI</button>
         </div>
       </div>
       <div class="card">
-        <h3>📌 Apoyo fijo</h3>
-        <div class="row"><span>Apoyo mensual</span><input type="number" id="apoyoInput" style="width:120px" onchange="setApoyo(this.value)"></div>
+        <h3 class="collapse-head" onclick="toggleSec('secMama')">👩 Cuentas con mamá <span class="caret">▾</span></h3>
+        <div class="collapse-body" data-key="secMama">
+          <div id="mamaList"></div>
+          <div class="row"><span>Total que le debes</span><span id="mamaTotal" style="font-weight:700">$0</span></div>
+          <div class="grid2" style="margin-top:8px">
+            <button class="btn btn-ghost btn-sm" onclick="openMamaModal()">+ Movimiento</button>
+            <button class="btn btn-ghost btn-sm" onclick="pdfMama()">📄 PDF para mamá</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="collapse-head" onclick="toggleSec('secApoyo')">📌 Apoyo fijo <span class="caret">▾</span></h3>
+        <div class="collapse-body" data-key="secApoyo">
+          <div class="row"><span>Apoyo mensual</span><input type="number" id="apoyoInput" style="width:120px" onchange="setApoyo(this.value)"></div>
+        </div>
       </div>
     </div>
 
@@ -289,7 +304,11 @@
     <!-- INVERSION -->
     <div class="tab" id="tab-inversion">
       <div class="card">
-        <h3>💰 Aportaciones de este mes</h3>
+        <h3>🗓️ Elige un mes</h3>
+        <div id="calInv" class="month-cal"></div>
+      </div>
+      <div class="card">
+        <h3 id="invMesLbl">💰 Aportaciones de este mes</h3>
         <div class="grid2">
           <div><label style="font-size:11px;color:var(--muted)">1ª quincena</label><input type="number" id="q1" onchange="setInv('q1',this.value)"></div>
           <div><label style="font-size:11px;color:var(--muted)">2ª quincena</label><input type="number" id="q2" onchange="setInv('q2',this.value)"></div>
@@ -299,6 +318,7 @@
       <div class="card">
         <h3>📈 Rendimiento del mes</h3>
         <input type="number" id="rendMes" placeholder="Rendimiento total del mes" onchange="setRendMes(this.value)">
+        <div id="rendMesNota" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
       </div>
       <div class="card">
         <h3>📊 Aportaciones por mes</h3>
@@ -309,20 +329,18 @@
     <!-- RENDIMIENTO -->
     <div class="tab" id="tab-rendim">
       <div class="card">
-        <h3>📆 Rendimiento día a día</h3>
+        <h3>🗓️ Elige un mes</h3>
+        <div id="calRend" class="month-cal"></div>
+      </div>
+      <div class="card">
+        <h3>📆 Rendimiento por semana</h3>
         <div class="week-grid" id="weekGrid"></div>
         <div style="margin-top:8px;font-size:13px" id="rendTotals"></div>
       </div>
       <div class="card">
-        <h3>✏️ Capturar día</h3>
-        <div class="grid3">
-          <input type="date" id="rendDate">
-          <input type="number" id="rendVal" placeholder="Monto">
-          <select id="rendEst"><option value="0">Real</option><option value="1">Estimado ~</option></select>
-        </div>
-        <button class="btn btn-sm" style="margin-top:8px" onclick="addRend()">Guardar</button>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px;margin-left:6px" onclick="genEstimados()">✨ Generar días estimados</button>
-        <div id="rendList" style="margin-top:8px"></div>
+        <h3>✏️ Capturar semanas</h3>
+        <div id="rendWeeks"></div>
+        <button class="btn btn-sm" style="margin-top:8px" onclick="saveSemanas()">Guardar</button>
       </div>
     </div>
 
@@ -381,7 +399,7 @@
       </div>
       <div class="card">
         <h3>🔔 Notificaciones</h3>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Avisos el día 13 y recordatorio diario de rendimiento.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Avisos el día 13 y recordatorio de rendimiento por semana.</div>
         <button class="btn btn-ghost btn-sm" onclick="enableNotifications()">Activar notificaciones</button>
       </div>
       <div class="card">
@@ -440,7 +458,7 @@ function defaultMonth(k){
     msi:[], deudaMama:[], apoyo:5000,
     gasto:{ mama:{budget:3000,spent:0,items:[]}, yo:{budget:1000,spent:0,items:[]} },
     inversion:{ q1:0, q2:0, rendimiento:0 },
-    rendimientoDiario:{},
+    rendimientoSemanas:[],
     savedSnapshot:0,
     created:new Date().toISOString()
   };
@@ -466,7 +484,7 @@ function seedMonths(){
     ],
     gasto:{mama:{budget:2000,spent:0,items:[]},yo:{budget:382,spent:0,items:[]}},
     inversion:{q1:22400,q2:8000,rendimiento:2700},
-    rendimientoDiario:{},
+    rendimientoSemanas:[],
   });
   // September 2024
   months.push({
@@ -485,7 +503,7 @@ function seedMonths(){
     ],
     gasto:{mama:{budget:2500,spent:0,items:[]},yo:{budget:1428,spent:0,items:[]}},
     inversion:{q1:23269,q2:7000,rendimiento:3270},
-    rendimientoDiario:{},
+    rendimientoSemanas:[],
   });
   // October 2024
   months.push({
@@ -504,7 +522,7 @@ function seedMonths(){
     ],
     gasto:{mama:{budget:2000,spent:0,items:[]},yo:{budget:900,spent:0,items:[]}},
     inversion:{q1:23269,q2:5000,rendimiento:3270},
-    rendimientoDiario:{},
+    rendimientoSemanas:[],
   });
   // November 2024
   months.push({
@@ -524,7 +542,7 @@ function seedMonths(){
     ],
     gasto:{mama:{budget:3000,spent:0,items:[]},yo:{budget:2000,spent:0,items:[]}},
     inversion:{q1:23100,q2:3580,rendimiento:3540},
-    rendimientoDiario:{},
+    rendimientoSemanas:[],
   });
   return months;
 }
@@ -540,6 +558,25 @@ function loadState(){
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
 function currentMonth(){ return state.months.find(m=>m.id===state.current) || state.months[state.months.length-1]; }
+function invSelMonth(){ const id=state.config&&state.config.invCalMonth; return state.months.find(m=>m.id===id)||currentMonth(); }
+function selectInvMonth(id){ if(!state.config) state.config={}; state.config.invCalMonth=id; saveState(); renderAll(); }
+function weeksInMonth(id){ return Math.ceil(daysInMonth(id)/7); }
+function renderMonthCalendars(){
+  ["calInv","calRend"].forEach(cid=>{
+    const el=document.getElementById(cid); if(!el) return;
+    el.innerHTML="";
+    const sel=invSelMonth().id;
+    state.months.forEach(m=>{
+      const aport=(m.inversion.q1||0)+(m.inversion.q2||0);
+      const b=document.createElement("div");
+      b.className="month-chip"+(m.id===sel?" active":"");
+      b.title=m.label+" · aportación $"+fmt(aport);
+      b.innerHTML=`${m.label.split(" ")[0].slice(0,3)}<small>$${fmtI(aport)}</small>`;
+      b.onclick=()=>selectInvMonth(m.id);
+      el.appendChild(b);
+    });
+  });
+}
 function monthIndex(id){ return state.months.findIndex(m=>m.id===id); }
 function prevMonthId(id){ const i=monthIndex(id); return i>0?state.months[i-1].id:null; }
 function nextMonthId(id){ const i=monthIndex(id); return i<state.months.length-1?state.months[i+1].id:null; }
@@ -558,7 +595,23 @@ function showTab(name){
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
 
 // ---------- RENDER ----------
-function renderAll(){ renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderCuentasMama(); renderInversion(); renderRendim(); renderMeta(); renderMas(); renderAlerts(); }
+function renderAll(){ applyCollapsed(); renderMonthCalendars(); renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderCuentasMama(); renderInversion(); renderRendim(); renderMeta(); renderMas(); renderAlerts(); }
+function toggleSec(key){
+  if(!state.config) state.config={};
+  if(!state.config.deudasCollapsed) state.config.deudasCollapsed={};
+  state.config.deudasCollapsed[key]=!state.config.deudasCollapsed[key];
+  saveState(); applyCollapsed();
+}
+function applyCollapsed(){
+  document.querySelectorAll(".collapse-body").forEach(b=>{
+    const key=b.getAttribute("data-key");
+    const col=!!(state.config && state.config.deudasCollapsed && state.config.deudasCollapsed[key]);
+    b.classList.toggle("collapsed",col);
+    const head=b.previousElementSibling;
+    const caret=head&&head.querySelector?head.querySelector(".caret"):null;
+    if(caret) caret.style.transform=col?"rotate(-90deg)":"";
+  });
+}
 
 function renderHeader(){
   const m=currentMonth();
@@ -844,12 +897,17 @@ function renderGastos(){
     const g=m.gasto[who];
     const spent = who==="mama" ? gastoMamaTotal(m) : gastoTotal(m,"yo");
     const pct=g.budget?Math.min(100,(spent/g.budget)*100):0;
-    const over=spent>g.budget;
+    const diff=spent-(g.budget||0);
+    const over=diff>0;
+    const msg= over
+      ? `<div style="font-size:11px;color:var(--red);font-weight:700;margin-top:3px">⚠️ Te excediste por $${fmt(diff)}</div>`
+      : `<div style="font-size:11px;color:var(--green);margin-top:3px">Te quedan $${fmt(-diff)}</div>`;
     const div=document.createElement("div");
     div.style.marginBottom="10px";
     div.innerHTML=`
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${who==="mama"?"👩 Gasto con mamá":"🙋 Gasto personal"}</span><span>$${fmt(spent)} / $${fmt(g.budget)}</span></div>
       <div class="msi-progress"><div class="msi-fill" style="width:${pct}%;background:${over?'var(--red)':'var(--green)'}"></div></div>
+      ${msg}
     `;
     wrap.appendChild(div);
   });
@@ -900,7 +958,9 @@ function renderGastos(){
 }
 
 function renderInversion(){
-  const m=currentMonth();
+  const m=invSelMonth();
+  const ml=document.getElementById("invMesLbl"); if(ml) ml.textContent="💰 Aportaciones de "+m.label;
+  const rn=document.getElementById("rendMesNota"); if(rn) rn.textContent="Se reparte entre las "+weeksInMonth(m.id)+" semanas del mes. Total: $"+fmt(m.inversion.rendimiento||0);
   document.getElementById("q1").value=m.inversion.q1||0;
   document.getElementById("q2").value=m.inversion.q2||0;
   document.getElementById("rendMes").value=m.inversion.rendimiento||0;
@@ -945,35 +1005,33 @@ function drawMetaChart(){
 }
 
 function renderRendim(){
-  const m=currentMonth();
-  // week grid: group rendimientoDiario by week of month
-  const weeks=[0,0,0,0,0];
-  Object.entries(m.rendimientoDiario||{}).forEach(([d,v])=>{
-    const day=+d.split("-")[2];
-    const wi=Math.min(4,Math.floor((day-1)/7));
-    weeks[wi]+=v.value||0;
-  });
+  const m=invSelMonth();
+  const n=weeksInMonth(m.id);
+  const dim=daysInMonth(m.id);
+  if(!Array.isArray(m.rendimientoSemanas)) m.rendimientoSemanas=Array(n).fill(0);
+  while(m.rendimientoSemanas.length<n) m.rendimientoSemanas.push(0);
+  if(m.rendimientoSemanas.length>n) m.rendimientoSemanas.length=n;
   const grid=document.getElementById("weekGrid");
   grid.innerHTML="";
-  weeks.forEach((w,i)=>{
+  let total=0;
+  m.rendimientoSemanas.forEach((v,i)=>{
+    total+=Number(v)||0;
+    const desde=i*7+1, hasta=Math.min(dim,(i+1)*7);
     const div=document.createElement("div");
     div.className="week-cell";
-    div.innerHTML=`<div class="w">Sem ${i+1}</div><div class="a">$${fmtI(w)}</div>`;
+    div.innerHTML=`<div class="w">Sem ${i+1}</div><div class="w">${desde}–${hasta}</div><div class="a">$${fmtI(v)}</div>`;
     grid.appendChild(div);
   });
-  const total=Object.values(m.rendimientoDiario||{}).reduce((s,v)=>s+(v.value||0),0);
-  const days=Object.keys(m.rendimientoDiario||{}).length;
-  document.getElementById("rendTotals").innerHTML=`Total del mes: $${fmt(total)} · Promedio diario: $${fmt(days?total/days:0)} · Días capturados: ${fmtI(days)}`;
-  // list
-  const rl=document.getElementById("rendList");
-  rl.innerHTML="";
-  Object.entries(m.rendimientoDiario||{}).sort().reverse().forEach(([d,v])=>{
-    const div=document.createElement("div");
-    div.className="row";
-    div.innerHTML=`<span>${d} ${v.estimated?"~":""}</span><span>$${fmt(v.value)} <button class="btn btn-danger btn-sm" onclick="delRend('${d}')">🗑</button></span>`;
-    rl.appendChild(div);
+  document.getElementById("rendTotals").innerHTML=`Total del mes: $${fmt(total)} · ${n} semanas · Promedio semanal: $${fmt(n?total/n:0)}`;
+  const rw=document.getElementById("rendWeeks");
+  rw.innerHTML="";
+  m.rendimientoSemanas.forEach((v,i)=>{
+    const desde=i*7+1, hasta=Math.min(dim,(i+1)*7);
+    const row=document.createElement("div");
+    row.className="row";
+    row.innerHTML=`<span>Semana ${i+1} <span style="color:var(--muted);font-size:11px">(${desde}–${hasta})</span></span><input type="number" id="rendSem${i}" class="week-input" style="width:120px" value="${v||0}" step="0.01"></div>`;
+    rw.appendChild(row);
   });
-  document.getElementById("rendDate").value=todayKey();
 }
 
 function renderMeta(){
@@ -1217,14 +1275,32 @@ function saveMama(){
   syncToBot(true).catch(()=>{});
 }
 function setInv(field,v){
-  const m=currentMonth();
+  const m=invSelMonth();
   m.inversion[field]=parseFloat(v)||0;
   saveState(); renderAll();
 }
 function setRendMes(v){
-  const m=currentMonth();
-  m.inversion.rendimiento=parseFloat(v)||0;
+  const m=invSelMonth();
+  const total=parseFloat(v)||0;
+  const n=weeksInMonth(m.id);
+  const each=Math.round((total/n)*100)/100;
+  const arr=Array(n).fill(each);
+  arr[n-1]=Math.round((total-each*(n-1))*100)/100;
+  m.rendimientoSemanas=arr;
+  m.inversion.rendimiento=total;
   saveState(); renderAll();
+}
+function saveSemanas(){
+  const m=invSelMonth();
+  const n=weeksInMonth(m.id);
+  const arr=[];
+  for(let i=0;i<n;i++){
+    const el=document.getElementById("rendSem"+i);
+    arr.push(parseFloat(el&&el.value)||0);
+  }
+  m.rendimientoSemanas=arr;
+  m.inversion.rendimiento=Math.round(arr.reduce((s,x)=>s+x,0)*100)/100;
+  saveState(); renderAll(); toast("Rendimiento guardado");
 }
 function addRend(){
   const d=document.getElementById("rendDate").value;
@@ -1328,22 +1404,13 @@ function createNewMonth(){
   nm.apoyo=last.apoyo;
   nm.gasto={mama:{budget:last.gasto.mama.budget,spent:0,items:[]},yo:{budget:last.gasto.yo.budget,spent:0,items:[]}};
   nm.inversion={q1:0,q2:0,rendimiento:0};
-  // generate estimated daily rendimiento from previous month average
-  const prev=last;
-  let avg=0;
-  if(prev && prev.rendimientoDiario && Object.keys(prev.rendimientoDiario).length){
-    const vals=Object.values(prev.rendimientoDiario);
-    avg=vals.reduce((s,v)=>s+(v.value||0),0)/vals.length;
-  } else if(prev && (prev.inversion.rendimiento||0)>0){
-    avg=(prev.inversion.rendimiento||0)/daysInMonth(prev.id);
-  }
-  const dim=daysInMonth(nm.id);
-  const [y,mo]=nm.id.split("-").map(Number);
-  nm.rendimientoDiario={};
-  for(let d=1;d<=dim;d++){
-    const key=y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0");
-    nm.rendimientoDiario[key]={value:Math.round(avg*100)/100,estimated:true};
-  }
+  // semanas del mes nuevo con el promedio semanal del mes anterior
+  const nSem=weeksInMonth(nm.id);
+  const promed=last && Array.isArray(last.rendimientoSemanas) && last.rendimientoSemanas.length
+    ? last.rendimientoSemanas.reduce((s,v)=>s+(Number(v)||0),0)/last.rendimientoSemanas.length
+    : 0;
+  nm.rendimientoSemanas=Array(nSem).fill(Math.round(promed*100)/100);
+  nm.inversion.rendimiento=Math.round(promed*nSem*100)/100;
   state.months.push(nm);
   state.current=k;
   saveState(); renderAll(); toast("Mes nuevo creado, MSI avanzados");
@@ -1755,20 +1822,11 @@ function notify(title,body){
 }
 function checkNotifications(){
   const now=new Date();
-  const today=now.toISOString().slice(0,10);
   if(!state.config) state.config={};
   // day 13: month update
   if(now.getDate()===13 && state.config.lastNotifMonth!==monthKey(now)){
     notify("Finanzas actualizadas","Se ha creado el mes nuevo y actualizado tus MSI. Revisa tu app.");
     state.config.lastNotifMonth=monthKey(now);
-    saveState();
-  }
-  // daily rendimiento reminder: if today's rendimiento not captured
-  const m=currentMonth();
-  const todayRend=m.rendimientoDiario && m.rendimientoDiario[today];
-  if(!todayRend && state.config.lastRendNotif!==today){
-    notify("Captura tu rendimiento","No has registrado el rendimiento de hoy. Ábre la app para capturarlo.");
-    state.config.lastRendNotif=today;
     saveState();
   }
 }
@@ -1822,7 +1880,29 @@ function init(){
     }
     state.config.msiNov2026=true;
   }
-  state.months.forEach(m=>fillEstimatedDays(m));
+  // migrar rendimiento diario a semanas (4 o 5 según el mes)
+  if(!state.config.rendSemanasMigrado){
+    state.months.forEach(m=>{
+      const n=weeksInMonth(m.id);
+      if(!Array.isArray(m.rendimientoSemanas)){
+        const arr=Array(n).fill(0);
+        Object.entries(m.rendimientoDiario||{}).forEach(([d,v])=>{
+          const day=parseInt(String(d).split("-")[2],10)||1;
+          const wi=Math.min(n-1,Math.floor((day-1)/7));
+          arr[wi]+=Number(v&&v.value)||0;
+        });
+        m.rendimientoSemanas=arr.map(x=>Math.round(x*100)/100);
+      }
+      const suma=m.rendimientoSemanas.reduce((s,x)=>s+(Number(x)||0),0);
+      if(!suma && (m.inversion.rendimiento||0)>0){
+        const each=Math.round((m.inversion.rendimiento/n)*100)/100;
+        m.rendimientoSemanas=Array(n).fill(each);
+        m.rendimientoSemanas[n-1]=Math.round((m.inversion.rendimiento-each*(n-1))*100)/100;
+      }
+      m.inversion.rendimiento=Math.round(m.rendimientoSemanas.reduce((s,x)=>s+(Number(x)||0),0)*100)/100;
+    });
+    state.config.rendSemanasMigrado=true;
+  }
   saveState();
   renderAll();
   checkNotifications();
