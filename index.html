@@ -1878,6 +1878,22 @@ function addOneMonth(k){ const [y,m]=k.split("-").map(Number); const d=new Date(
 function init(){
   applyDark();
   applyCompact();
+  // Enlace de configuración personal: ?setup=base64(url|token). Se usa una sola vez.
+  try{
+    const q=new URLSearchParams(location.search);
+    const setup=q.get("setup");
+    if(setup){
+      const cfg=JSON.parse(atob(setup));
+      if(cfg.botUrl){
+        state.config=state.config||{};
+        state.config.botUrl=cfg.botUrl;
+        state.config.botToken=cfg.botToken||"";
+        saveState(); saveCfg();
+      }
+      q.delete("setup");
+      history.replaceState(null,"",location.pathname+(q.toString()?"?"+q.toString():"")+location.hash);
+    }
+  }catch(e){}
   const now=new Date();
   const k=monthKey(now);
   const last=state.months.length?state.months[state.months.length-1].id:null;
@@ -1887,6 +1903,15 @@ function init(){
     createNewMonth();
   }
   if(!state.current || !state.months.find(m=>m.id===state.current)) state.current=state.months[state.months.length-1].id;
+  // Si el dispositivo no tiene el mes real, crear uno vacío y saltar a él.
+  const realK=monthKey(new Date());
+  if(!state.months.find(m=>m.id===realK)){
+    const nm=defaultMonth(realK);
+    const ult=state.months[state.months.length-1];
+    nm.apoyo=(ult&&ult.apoyo)||5000;
+    state.months.push(nm);
+    state.current=realK;
+  }
   // recuperar la conexión guardada si el estado la perdió
   const savedCfg=loadCfg();
   if(savedCfg && savedCfg.botUrl && !(state.config && state.config.botUrl && state.config.botToken)){
@@ -1951,7 +1976,6 @@ function init(){
   checkNotifications();
   // auto-sync with Telegram if configured
   if(state.config && state.config.botUrl && state.config.botToken){
-    syncToBot(true).catch(()=>{});
     importFromBot(true).catch(()=>{});
     // refrescar al volver a la app y cada minuto mientras esté visible
     window.addEventListener("focus",()=>{ importFromBot(true).catch(()=>{}); });
