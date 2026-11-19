@@ -1967,6 +1967,16 @@ function init(){
     const nm=defaultMonth(realK);
     const ult=state.months[state.months.length-1];
     nm.apoyo=(ult&&ult.apoyo)||5000;
+    // heredar aportación y rendimiento del último mes conocido
+    if(ult && ult.inversion){
+      nm.inversion={q1:Number(ult.inversion.q1)||0,q2:Number(ult.inversion.q2)||0,rendimiento:Number(ult.inversion.rendimiento)||0};
+    }
+    if(ult && Array.isArray(ult.rendimientoSemanas) && ult.rendimientoSemanas.length){
+      const nSem=weeksInMonth(realK);
+      const promed=ult.rendimientoSemanas.reduce((s,v)=>s+(Number(v)||0),0)/ult.rendimientoSemanas.length;
+      nm.rendimientoSemanas=Array(nSem).fill(Math.round(promed*100)/100);
+      nm.inversion.rendimiento=Math.round(promed*nSem*100)/100;
+    }
     state.months.push(nm);
     state.current=realK;
   }
@@ -2046,7 +2056,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=8").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=9").catch(()=>{}); }
 </script>
 </body>
 </html>
