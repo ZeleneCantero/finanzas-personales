@@ -574,6 +574,8 @@ function deudaMamaDelMes(mesId){
 }
 // Gasto variable = deuda con mamá (movimientos) + lo que ella ha gastado.
 function gastoVariableTotal(m){ return gastoTotal(m,"mama")+gastoTotal(m,"yo")+deudaMamaDelMes(m.id); }
+// Lo gastado con mamá = movimientos que le debo + gastos sueltos con ella.
+function gastoMamaTotal(m){ return deudaMamaDelMes(m.id)+gastoTotal(m,"mama"); }
 function totalSaved(){
   const base = (state.config && state.config.savedBase) ? state.config.savedBase : 0;
   return base + state.months.reduce((s,m)=>s+(m.inversion.q1||0)+(m.inversion.q2||0)+(m.inversion.rendimiento||0),0);
@@ -585,7 +587,7 @@ function renderAlerts(){
   // budget exceeded
   ["mama","yo"].forEach(who=>{
     const g=m.gasto[who];
-    const spent=gastoTotal(m,who);   // sin las deudas de Telegram
+    const spent = who==="mama" ? gastoMamaTotal(m) : gastoTotal(m,"yo");
     if(g.budget && spent>g.budget){
       msgs.push({type:"danger", text:`⚠️ Gasto ${who==="mama"?"con mamá":"propio"} excedió el presupuesto: $${fmt(spent)} / $${fmt(g.budget)}`});
     } else if(g.budget && spent/g.budget>=0.8){
@@ -791,8 +793,7 @@ function renderGastos(){
   wrap.innerHTML="";
   ["mama","yo"].forEach(who=>{
     const g=m.gasto[who];
-    const spent=g.items.filter(x=>!x.tgId).reduce((s,x)=>s+x.monto, 0);
-    g.spent=spent;
+    const spent = who==="mama" ? gastoMamaTotal(m) : gastoTotal(m,"yo");
     const pct=g.budget?Math.min(100,(spent/g.budget)*100):0;
     const over=spent>g.budget;
     const div=document.createElement("div");
@@ -1224,7 +1225,7 @@ function quickAdd(){
     const who=mama?"mama":"yo";
     m.gasto[who].items.unshift({id:uid(),desc,monto,fecha:todayKey()});
     saveState();
-    const spent=m.gasto[who].items.reduce((s,x)=>s+x.monto,m.gasto[who].spent||0);
+    const spent = who==="mama" ? gastoMamaTotal(m) : gastoTotal(m,"yo");
     addMsg("Bot",`✅ Agregado: ${mama?"Mamá":"Yo"} · $${fmt(monto)} · ${desc}\nGasto ${mama?"mamá":"yo"}: $${fmt(spent)} / $${fmt(m.gasto[who].budget)}`);
     syncToBot(true).catch(()=>{});
   } else {
