@@ -1,4 +1,4 @@
-const CACHE = "finanzas-v7";
+const CACHE = "finanzas-v8";
 const ASSETS = ["./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", (e) => {

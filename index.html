@@ -1623,6 +1623,8 @@ async function syncToBot(silent){
     if(Array.isArray(m.deudaMama)&&m.deudaMama.length) payload.mamaAccount=m.deudaMama;
     if((Number(m.apoyo)||0)>0) payload.apoyo=m.apoyo;
     if(Array.isArray(m.msi)&&m.msi.length) payload.msi=m.msi;
+    if(m.inversion && ((Number(m.inversion.q1)||0)+(Number(m.inversion.q2)||0)+(Number(m.inversion.rendimiento)||0))>0) payload.inversion=m.inversion;
+    if(Array.isArray(m.rendimientoSemanas)&&m.rendimientoSemanas.length) payload.rendSemanas=m.rendimientoSemanas;
     const r=await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify(payload)});
     if(!r.ok) throw new Error("HTTP "+r.status);
     state.config.lastSync=Date.now();
@@ -1761,6 +1763,15 @@ function applySharedConfigFromBot(s){
     const v=Number(s.gastoMama)||0;
     if(mm.gasto && mm.gasto.mama && (Number(mm.gasto.mama.budget)||0)!==v){ mm.gasto.mama.budget=v; changes++; }
   }
+  if(s.inversion && (s.inversion.q1!=null || s.inversion.q2!=null || s.inversion.rendimiento!=null)){
+    const inv={q1:Number(s.inversion.q1)||0,q2:Number(s.inversion.q2)||0,rendimiento:Number(s.inversion.rendimiento)||0};
+    const cur={q1:Number(mm.inversion?.q1)||0,q2:Number(mm.inversion?.q2)||0,rendimiento:Number(mm.inversion?.rendimiento)||0};
+    if(JSON.stringify(inv)!==JSON.stringify(cur)){ mm.inversion=inv; changes++; }
+  }
+  if(Array.isArray(s.rendSemanas) && s.rendSemanas.length){
+    const next=s.rendSemanas.map(x=>Number(x)||0);
+    if(JSON.stringify(next)!==JSON.stringify(mm.rendimientoSemanas||[])){ mm.rendimientoSemanas=next; changes++; }
+  }
   state.config.msiNov2026=true;
   return changes;
 }
@@ -1786,6 +1797,11 @@ async function importFromBot(silent){
     let shared=null;
     if(sr.ok){ try{ shared=await sr.json(); }catch(e){} }
     const cfgChanges=applySharedConfigFromBot(shared);
+    // Si el bot aún no tiene inversión, la sembra con el dispositivo que sí la tiene.
+    const mmSeed=syncMonth();
+    if(shared && !shared.inversion && mmSeed && ((Number(mmSeed.inversion?.q1)||0)+(Number(mmSeed.inversion?.q2)||0))>0){
+      await syncToBot(true);
+    }
     state.config.lastSync=Date.now();
     state.config.lastSyncError=null;
     saveState(); renderAll(); renderSyncStatus();
@@ -2030,7 +2046,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=7").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=8").catch(()=>{}); }
 </script>
 </body>
 </html>
