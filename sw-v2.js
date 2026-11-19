@@ -1,4 +1,4 @@
-const CACHE = "finanzas-v3";
+const CACHE = "finanzas-v4";
 const ASSETS = ["./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", (e) => {
@@ -17,6 +17,11 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
+
+  // NUNCA cachear el API (Telegram) ni recursos de otros dominios
+  const u = new URL(req.url);
+  if (u.origin !== self.location.origin) return;
+  if (u.pathname.includes("/api/")) return;
 
   const isHTML =
     req.mode === "navigate" ||

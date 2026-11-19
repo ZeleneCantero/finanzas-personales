@@ -223,8 +223,10 @@
       </div>
       <div class="card">
         <h3>📝 Movimientos</h3>
+        <div id="gastoState" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
         <div id="gastoList"></div>
         <button class="btn btn-ghost btn-sm" onclick="openGastoModal()">+ Agregar gasto</button>
+        <button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="importFromBot()">🔄 Actualizar de Telegram</button>
       </div>
       <div class="card">
         <h3>🏷️ Por categoría</h3>
@@ -495,6 +497,10 @@ function showTab(name){
   document.getElementById("tab-"+name).classList.add("active");
   document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
   renderAll();
+  // al entrar a Gastos/Resumen, trae lo último de Telegram
+  if((name==="gastos"||name==="resumen") && state.config && state.config.botUrl && state.config.botToken){
+    importFromBot(true).catch(()=>{});
+  }
 }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
 
@@ -695,6 +701,18 @@ function renderGastos(){
   });
   if(!Object.keys(catTot).length) cs.innerHTML="<div style='color:var(--muted);font-size:13px'>Sin gastos</div>";
   if(!all.length) gl.innerHTML="<div style='color:var(--muted);font-size:13px'>Sin gastos</div>";
+  // estado de Telegram
+  const gs=document.getElementById("gastoState");
+  if(gs){
+    const tgCount=all.filter(x=>x.tgId).length;
+    if(tgCount){
+      gs.textContent=`🔄 ${tgCount} movimiento(s) vienen de Telegram · se actualizan solos`;
+    } else if(state.config && state.config.botUrl && state.config.botToken){
+      gs.textContent="🔄 Conectado a Telegram · sin movimientos pendientes importados";
+    } else {
+      gs.textContent="⚠️ Telegram no conectado · configura en Más → Sincronización";
+    }
+  }
 }
 
 function renderInversion(){
@@ -924,6 +942,12 @@ function saveGasto(){
 }
 function delGasto(id,who){
   const m=currentMonth();
+  const it=m.gasto[who].items.find(x=>x.id===id);
+  if(it && it.tgId){
+    if(!state.config) state.config={};
+    if(!Array.isArray(state.config.tgIgnored)) state.config.tgIgnored=[];
+    state.config.tgIgnored.push(it.tgId);
+  }
   m.gasto[who].items=m.gasto[who].items.filter(x=>x.id!==id);
   saveState(); renderAll();
 }
@@ -1222,7 +1246,7 @@ async function syncToBot(silent){
   const m=syncMonth();
   const summary=buildResumenTexto(m);
   try{
-    const r=await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama,apoyo:m.apoyo,msi:m.msi,msiMonth:m.id,gasto:m.gasto})});
+    const r=await fetch(url+"/api/sync",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama,apoyo:m.apoyo,msi:m.msi,msiMonth:m.id,gasto:m.gasto})});
     if(!r.ok) throw new Error("HTTP "+r.status);
     state.config.lastSync=Date.now();
     state.config.lastSyncError=null;
@@ -1236,43 +1260,62 @@ async function syncToBot(silent){
 }
 
 // Concilia los movimientos de Telegram con la app: agrega, actualiza y quita los liquidados.
+function monthIdOf(dateStr){
+  const d=new Date(dateStr);
+  if(isNaN(d.getTime())) return null;
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function remOf(mv){ return Math.max(0,(Number(mv.amount)||0)-(Number(mv.paid)||0)); }
+function isIgnored(id){
+  if(!state.config) state.config={};
+  if(!Array.isArray(state.config.tgIgnored)) state.config.tgIgnored=[];
+  return state.config.tgIgnored.includes(id);
+}
 function reconcileTelegram(ledger){
-  const m=currentMonth();
-  const items=m.gasto.mama.items;
   let added=0,updated=0,removed=0;
-  const live=new Map(ledger.map(x=>[x.id,x]));
-  const remOf=mv=>Math.max(0,(Number(mv.amount)||0)-(Number(mv.paid)||0));
+  if(!state.config) state.config={};
+  if(!Array.isArray(state.config.tgIgnored)) state.config.tgIgnored=[];
+  const byId=new Map(ledger.map(x=>[x.id,x]));
 
-  for(let i=items.length-1;i>=0;i--){
-    const it=items[i];
-    if(!it.tgId) continue;
-    const mv=live.get(it.tgId);
-    if(!mv || mv.settled || remOf(mv)<=0){ items.splice(i,1); removed++; continue; }
-    const rem=remOf(mv);
-    if(Math.abs((Number(it.monto)||0)-rem)>0.004 || it.desc!==mv.desc){
-      it.monto=rem; it.desc=mv.desc; updated++;
+  // 1) actualizar o quitar los ya vinculados (en cualquier mes)
+  state.months.forEach(mo=>{
+    const items=mo.gasto.mama.items;
+    for(let i=items.length-1;i>=0;i--){
+      const it=items[i];
+      if(!it.tgId) continue;
+      const mv=byId.get(it.tgId);
+      if(!mv || mv.settled || remOf(mv)<=0){ items.splice(i,1); removed++; continue; }
+      const rem=remOf(mv);
+      if(Math.abs((Number(it.monto)||0)-rem)>0.004 || it.desc!==mv.desc){
+        it.monto=rem; it.desc=mv.desc; updated++;
+      }
     }
-  }
+  });
 
+  // 2) agregar nuevos (al mes de su fecha) o ligar los antiguos sin tgId
   ledger.forEach(mv=>{
     const rem=remOf(mv);
     if(mv.settled || rem<=0) return;
-    if(items.some(it=>it.tgId===mv.id)) return;
+    if(isIgnored(mv.id)) return;
+    if(state.months.some(mo=>mo.gasto.mama.items.some(it=>it.tgId===mv.id))) return;
+    const mid=monthIdOf(mv.date);
+    const target=state.months.find(x=>x.id===mid) || currentMonth();
+    const items=target.gasto.mama.items;
     const legacy=items.find(it=>!it.tgId && it.desc===mv.desc && Math.abs((Number(it.monto)||0)-rem)<0.004);
     if(legacy){ legacy.tgId=mv.id; return; }
-    items.unshift({id:uid(), tgId:mv.id, desc:mv.desc, monto:rem, fecha:mv.date.slice(0,10), cat:"Otro", kind:mv.kind||"cobro"});
+    items.unshift({id:uid(), tgId:mv.id, desc:mv.desc, monto:rem, fecha:(mv.date||"").slice(0,10), cat:"Otro", kind:mv.kind||"cobro"});
     added++;
   });
 
   if(added||updated||removed) saveState();
-  return {added,updated,removed};
+  return {added,updated,removed,total:ledger.filter(m=>!m.settled && remOf(m)>0).length};
 }
 
 async function importFromBot(silent){
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,""); const token=(state.config?.botToken||"").trim();
   if(!url||!token){ if(!silent) toast("Falta URL o token"); return; }
   try{
-    const r=await fetch(url+"/api/ledger",{headers:{"X-Auth-Token":token}});
+    const r=await fetch(url+"/api/ledger?t="+Date.now(),{cache:"no-store",headers:{"X-Auth-Token":token}});
     if(!r.ok) throw new Error("HTTP "+r.status);
     const {ledger}=await r.json();
     if(!Array.isArray(ledger)){ if(!silent) toast("Sin datos"); return; }
@@ -1433,6 +1476,14 @@ function init(){
   if(state.config && state.config.botUrl && state.config.botToken){
     syncToBot(true).catch(()=>{});
     importFromBot(true).catch(()=>{});
+    // refrescar al volver a la app y cada minuto mientras esté visible
+    window.addEventListener("focus",()=>{ importFromBot(true).catch(()=>{}); });
+    document.addEventListener("visibilitychange",()=>{
+      if(document.visibilityState==="visible") importFromBot(true).catch(()=>{});
+    });
+    setInterval(()=>{
+      if(document.visibilityState==="visible") importFromBot(true).catch(()=>{});
+    },60000);
   }
 }
 init();
