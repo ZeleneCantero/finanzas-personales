@@ -1207,10 +1207,19 @@ function pdfMama(){
 // bot sync
 function setBotUrl(v){ state.config.botUrl=(v||"").trim().replace(/\/+$/,""); saveState(); }
 function setBotToken(v){ state.config.botToken=(v||"").trim(); saveState(); }
+// Mes que se envía al bot: el del calendario real (o el más reciente),
+// para que el resumen no cambie si estás revisando un mes pasado.
+function syncMonth(){
+  const k=monthKey(new Date());
+  const exact=state.months.find(m=>m.id===k);
+  if(exact) return exact;
+  return state.months[state.months.length-1];
+}
+
 async function syncToBot(silent){
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,""); const token=(state.config?.botToken||"").trim();
   if(!url||!token){ if(!silent) toast("Falta URL o token"); return; }
-  const m=currentMonth();
+  const m=syncMonth();
   const summary=buildResumenTexto(m);
   try{
     const r=await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama,apoyo:m.apoyo,msi:m.msi,msiMonth:m.id,gasto:m.gasto})});
