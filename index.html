@@ -167,6 +167,14 @@
         <div class="row"><span>Rendimiento</span><span class="compare" id="cmpRend"></span></div>
       </div>
       <div class="card">
+        <h3>🤝 Cuentas con mamá</h3>
+        <div class="row"><span>🔴 Debo</span><span id="resDebo" style="font-weight:700">$0</span></div>
+        <div class="row"><span>🟢 Me deben</span><span id="resMeDeben" style="font-weight:700">$0</span></div>
+        <div class="row"><span>💝 Apoyo del mes</span><span id="resApoyo">$0</span></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span id="resNetoLbl">Este mes le das</span><span id="resNeto">$0</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Debo + apoyo − me deben = neto</div>
+      </div>
+      <div class="card">
         <h3>⚡ Captura rápida</h3>
         <div class="grid2" style="margin-bottom:8px">
           <input id="quickInput" placeholder="ej: agregar a mamá 1000 Temu">
@@ -218,8 +226,22 @@
     <div class="tab" id="tab-gastos">
       <div id="alertsBannerGastos"></div>
       <div class="card">
+        <h3>🔴 Debo</h3>
+        <div id="deboList"></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span>Total que debo</span><span id="deboTotal">$0</span></div>
+      </div>
+      <div class="card">
+        <h3>🟢 Me deben</h3>
+        <div id="meDebenList"></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span>Total que me deben</span><span id="meDebenTotal">$0</span></div>
+      </div>
+      <div class="card">
         <h3>💸 Gasto variable BBVA</h3>
         <div id="gastoBars"></div>
+        <div class="grid2" style="margin-top:8px">
+          <div><div style="font-size:11px;color:var(--muted)">Presupuesto con mamá</div><input id="budMama" type="number" style="width:100%" onchange="setBudget('mama',this.value)"></div>
+          <div><div style="font-size:11px;color:var(--muted)">Presupuesto mío</div><input id="budYo" type="number" style="width:100%" onchange="setBudget('yo',this.value)"></div>
+        </div>
       </div>
       <div class="card">
         <h3>📝 Movimientos</h3>
@@ -387,7 +409,7 @@ function defaultMonth(k){
   return {
     id:k, label:monthLabel(k),
     msi:[], deudaMama:[], apoyo:5000,
-    gasto:{ mama:{budget:2000,spent:0,items:[]}, yo:{budget:1000,spent:0,items:[]} },
+    gasto:{ mama:{budget:3000,spent:0,items:[]}, yo:{budget:1000,spent:0,items:[]} },
     inversion:{ q1:0, q2:0, rendimiento:0 },
     rendimientoDiario:{},
     savedSnapshot:0,
@@ -507,7 +529,7 @@ function showTab(name){
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
 
 // ---------- RENDER ----------
-function renderAll(){ renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderInversion(); renderRendim(); renderMeta(); renderMas(); renderAlerts(); }
+function renderAll(){ renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderCuentasMama(); renderInversion(); renderRendim(); renderMeta(); renderMas(); renderAlerts(); }
 
 function renderHeader(){
   const m=currentMonth();
@@ -517,7 +539,7 @@ function renderHeader(){
   document.getElementById("progressFill").style.width=pct+"%";
   // whale follows the fill's right edge via CSS (left:100%)
   document.getElementById("progLeft").textContent="$"+fmtI(saldo);
-  document.getElementById("headerSub").textContent=m.label+" · Pagar BBVA: $"+fmt(bbva);
+  document.getElementById("headerSub").textContent=m.label;
   document.getElementById("mesLabel").textContent=m.label;
 }
 
@@ -530,7 +552,8 @@ function fijosTotal(m){
   const deuda=m.deudaMama.reduce((s,x)=>s+x.monto,0);
   return msi+deuda+(m.apoyo||0);
 }
-function gastoTotal(m,who){ return m.gasto[who].items.reduce((s,x)=>s+x.monto, m.gasto[who].spent||0); }
+// Los movimientos de Telegram (tgId) son deudas, NO gasto variable: se excluyen de las sumas.
+function gastoTotal(m,who){ return m.gasto[who].items.filter(x=>!x.tgId).reduce((s,x)=>s+x.monto, m.gasto[who].spent||0); }
 function totalSaved(){
   const base = (state.config && state.config.savedBase) ? state.config.savedBase : 0;
   return base + state.months.reduce((s,m)=>s+(m.inversion.q1||0)+(m.inversion.q2||0)+(m.inversion.rendimiento||0),0);
@@ -542,7 +565,7 @@ function renderAlerts(){
   // budget exceeded
   ["mama","yo"].forEach(who=>{
     const g=m.gasto[who];
-    const spent=g.items.reduce((s,x)=>s+x.monto,g.spent||0);
+    const spent=gastoTotal(m,who);   // sin las deudas de Telegram
     if(g.budget && spent>g.budget){
       msgs.push({type:"danger", text:`⚠️ Gasto ${who==="mama"?"con mamá":"propio"} excedió el presupuesto: $${fmt(spent)} / $${fmt(g.budget)}`});
     } else if(g.budget && spent/g.budget>=0.8){
@@ -570,7 +593,7 @@ function renderResumen(){
   document.getElementById("metaMini").innerHTML="Saldo: $"+fmt(totalSaved())+" · "+(totalSaved()/META*100).toFixed(2)+"% del millón";
 }
 
-function prevGasto(pm){ return (pm.gasto.mama.items.reduce((s,x)=>s+x.monto,pm.gasto.mama.spent||0)) + (pm.gasto.yo.items.reduce((s,x)=>s+x.monto,pm.gasto.yo.spent||0)); }
+function prevGasto(pm){ return gastoTotal(pm,"mama") + gastoTotal(pm,"yo"); }
 
 function renderCompare(id, prev, cur, higherIsBad){
   const el=document.getElementById(id);
@@ -658,13 +681,81 @@ function renderDeudas(){
   document.getElementById("mamaTotal").textContent="$"+fmt(total);
 }
 
+// ---------- Debo / Me deben / Cuentas con mamá ----------
+// Los movimientos que vienen de Telegram son deudas entre Zelene y mamá.
+// "dir" lo calcula el bot: me_deben (mamá le debe) o debo (ella le debe).
+function tgDeudas(){
+  const out=[];
+  state.months.forEach(mo=>{
+    (mo.gasto?.mama?.items||[]).forEach(it=>{
+      if(it.tgId) out.push({...it, mesId:mo.id, mesLabel:mo.label});
+    });
+  });
+  return out.sort((a,b)=>String(b.fecha||"").localeCompare(String(a.fecha||"")));
+}
+function dirDeuda(it){ return it.dir || (it.kind==="deuda" ? "debo" : "me_deben"); }
+function mamaMsiPend(){
+  const m=currentMonth();
+  return (m.deudaMama||[]).filter(x=>!(x.pago>=x.total) && !x.liquidado).map(x=>({...x,esMsi:true}));
+}
+function cuentasMama(){
+  const items=tgDeudas();
+  const meDeben=items.filter(x=>dirDeuda(x)==="me_deben");
+  const deboMov=items.filter(x=>dirDeuda(x)==="debo");
+  const msi=mamaMsiPend();
+  const suma=(a)=>a.reduce((s,x)=>s+(Number(x.monto)||0),0);
+  const totalMeDeben=suma(meDeben);
+  const totalMsi=suma(msi);
+  const totalDeboMov=suma(deboMov);
+  const totalDebo=totalDeboMov+totalMsi;
+  const m=currentMonth();
+  const apoyo=Number(m.apoyo)||0;
+  const neto=totalDebo+apoyo-totalMeDeben;
+  return {meDeben,deboMov,msi,totalMeDeben,totalDebo,totalDeboMov,totalMsi,apoyo,neto};
+}
+function filaDeuda(it){
+  const cur=currentMonth();
+  const fecha = it.esMsi ? `${it.pago} de ${it.total} pagos` : (it.mesId&&it.mesId!==cur.id ? it.mesLabel : (it.fecha||""));
+  const del = it.esMsi
+    ? `<button class="btn btn-danger btn-sm" onclick="delMama('${it.id}')">🗑</button>`
+    : `<button class="btn btn-danger btn-sm" onclick="delGasto('${it.id}','mama')">🗑</button>`;
+  const div=document.createElement("div");
+  div.className="row";
+  div.innerHTML=`<div style="flex:1;min-width:0;margin-right:8px"><div style="font-size:13px;font-weight:600;word-break:break-word">${it.desc}</div><div style="font-size:11px;color:var(--muted)">${fecha}</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><span style="font-weight:700">$${fmt(it.monto)}</span>${del}</div>`;
+  return div;
+}
+function renderCuentasMama(){
+  const c=cuentasMama();
+  const dl=document.getElementById("deboList");
+  if(dl){
+    dl.innerHTML="";
+    if(!c.deboMov.length && !c.msi.length) dl.innerHTML="<div style='color:var(--muted);font-size:13px'>Nada pendiente 🎉</div>";
+    c.deboMov.forEach(it=>dl.appendChild(filaDeuda(it)));
+    c.msi.forEach(it=>dl.appendChild(filaDeuda(it)));
+    const t=document.getElementById("deboTotal"); if(t) t.textContent="$"+fmt(c.totalDebo);
+  }
+  const ml=document.getElementById("meDebenList");
+  if(ml){
+    ml.innerHTML="";
+    if(!c.meDeben.length) ml.innerHTML="<div style='color:var(--muted);font-size:13px'>Nadie te debe 🎉</div>";
+    c.meDeben.forEach(it=>ml.appendChild(filaDeuda(it)));
+    const t=document.getElementById("meDebenTotal"); if(t) t.textContent="$"+fmt(c.totalMeDeben);
+  }
+  const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
+  set("resDebo","$"+fmt(c.totalDebo));
+  set("resMeDeben","$"+fmt(c.totalMeDeben));
+  set("resApoyo","$"+fmt(c.apoyo));
+  set("resNetoLbl", c.neto>=0 ? "Este mes le das" : "Este mes te debe");
+  set("resNeto","$"+fmt(Math.abs(c.neto)));
+}
+
 function renderGastos(){
   const m=currentMonth();
   const wrap=document.getElementById("gastoBars");
   wrap.innerHTML="";
   ["mama","yo"].forEach(who=>{
     const g=m.gasto[who];
-    const spent=g.items.reduce((s,x)=>s+x.monto, g.spent||0);
+    const spent=g.items.filter(x=>!x.tgId).reduce((s,x)=>s+x.monto, 0);
     g.spent=spent;
     const pct=g.budget?Math.min(100,(spent/g.budget)*100):0;
     const over=spent>g.budget;
@@ -681,12 +772,13 @@ function renderGastos(){
   // list
   const gl=document.getElementById("gastoList");
   gl.innerHTML="";
-  const all=[...m.gasto.mama.items.map(x=>({...x,who:"mama"})),...m.gasto.yo.items.map(x=>({...x,who:"yo"}))]
+  // Solo gastos reales: las deudas de Telegram se muestran arriba (Debo / Me deben).
+  const all=[...m.gasto.mama.items.filter(x=>!x.tgId).map(x=>({...x,who:"mama"})),...m.gasto.yo.items.filter(x=>!x.tgId).map(x=>({...x,who:"yo"}))]
     .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   all.forEach(item=>{
     const div=document.createElement("div");
     div.className="row";
-    const kindBadge=item.kind==="deuda"?'<span class="pill pill-amber" style="font-size:10px">Deuda</span>':'<span class="pill pill-green" style="font-size:10px">Cobro</span>';
+    const kindBadge=!item.tgId?"":(item.kind==="deuda"?'<span class="pill pill-amber" style="font-size:10px">Deuda</span>':'<span class="pill pill-green" style="font-size:10px">Cobro</span>');
     div.innerHTML=`<div style="flex:1;min-width:0;margin-right:8px"><div style="font-size:13px;font-weight:600;word-break:break-word">${item.desc} <span class="pill pill-pink" style="font-size:10px">${item.cat||"Otro"}</span> ${kindBadge}</div><div style="font-size:11px;color:var(--muted)">${item.fecha} · ${item.who==="mama"?"mamá":"yo"}</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><span style="font-weight:700">$${fmt(item.monto)}</span><button class="btn btn-danger btn-sm" onclick="delGasto('${item.id}','${item.who}')">🗑</button></div>`;
     gl.appendChild(div);
   });
@@ -706,7 +798,7 @@ function renderGastos(){
   // estado de Telegram
   const gs=document.getElementById("gastoState");
   if(gs){
-    const tgCount=all.filter(x=>x.tgId).length;
+    const tgCount=tgDeudas().length;
     if(tgCount){
       gs.textContent=`🔄 ${tgCount} movimiento(s) vienen de Telegram · se actualizan solos`;
     } else if(state.config && state.config.botUrl && state.config.botToken){
@@ -944,15 +1036,30 @@ function saveGasto(){
   syncToBot(true).catch(()=>{});
 }
 function delGasto(id,who){
-  const m=currentMonth();
-  const it=m.gasto[who].items.find(x=>x.id===id);
-  if(it && it.tgId){
+  let it=null, target=null;
+  state.months.forEach(mo=>{
+    const f=(mo.gasto?.[who]?.items||[]).find(x=>x.id===id);
+    if(f){ it=f; target=mo; }
+  });
+  if(!it) return;
+  if(it.tgId){
     if(!state.config) state.config={};
     if(!Array.isArray(state.config.tgIgnored)) state.config.tgIgnored=[];
     state.config.tgIgnored.push(it.tgId);
+    borrarEnBot(it.tgId);   // que también desaparezca del bot
   }
-  m.gasto[who].items=m.gasto[who].items.filter(x=>x.id!==id);
+  target.gasto[who].items=target.gasto[who].items.filter(x=>x.id!==id);
   saveState(); renderAll();
+}
+
+// Borra el movimiento en el bot para que las cuentas sigan cuadrando.
+async function borrarEnBot(tgId){
+  const url=(state.config?.botUrl||"").trim().replace(/\/+$/,"");
+  const token=(state.config?.botToken||"").trim();
+  if(!url||!token||!tgId) return;
+  try{
+    await fetch(url+"/api/delete",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({id:tgId})});
+  }catch(e){ console.warn("No se pudo borrar en el bot",e); }
 }
 function openMsiModal(){
   const html=`<h3>Agregar MSI</h3>
@@ -1293,7 +1400,7 @@ async function syncToBot(silent){
   const m=syncMonth();
   const summary=buildResumenTexto(m);
   try{
-    const r=await fetch(url+"/api/sync",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama,apoyo:m.apoyo,msi:m.msi,msiMonth:m.id,gasto:m.gasto})});
+    const r=await fetch(url+"/api/sync",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama,apoyo:m.apoyo,gastoMama:m.gasto.mama.budget,msi:m.msi,msiMonth:m.id,gasto:m.gasto})});
     if(!r.ok) throw new Error("HTTP "+r.status);
     state.config.lastSync=Date.now();
     state.config.lastSyncError=null;
@@ -1333,9 +1440,14 @@ function reconcileTelegram(ledger){
       const mv=byId.get(it.tgId);
       if(!mv || mv.settled || remOf(mv)<=0){ items.splice(i,1); removed++; continue; }
       const rem=remOf(mv);
-      if(Math.abs((Number(it.monto)||0)-rem)>0.004 || it.desc!==mv.desc){
-        it.monto=rem; it.desc=mv.desc; updated++;
-      }
+      const kind=mv.kind||"cobro";
+      const dir=mv.dir||(kind==="deuda"?"debo":"me_deben");
+      let cambio=false;
+      if(Math.abs((Number(it.monto)||0)-rem)>0.004){ it.monto=rem; cambio=true; }
+      if(it.desc!==mv.desc){ it.desc=mv.desc; cambio=true; }
+      if(it.kind!==kind){ it.kind=kind; cambio=true; }
+      if(it.dir!==dir){ it.dir=dir; cambio=true; }
+      if(cambio) updated++;
     }
   });
 
@@ -1349,8 +1461,10 @@ function reconcileTelegram(ledger){
     const target=state.months.find(x=>x.id===mid) || currentMonth();
     const items=target.gasto.mama.items;
     const legacy=items.find(it=>!it.tgId && it.desc===mv.desc && Math.abs((Number(it.monto)||0)-rem)<0.004);
-    if(legacy){ legacy.tgId=mv.id; return; }
-    items.unshift({id:uid(), tgId:mv.id, desc:mv.desc, monto:rem, fecha:(mv.date||"").slice(0,10), cat:"Otro", kind:mv.kind||"cobro"});
+    const kind=mv.kind||"cobro";
+    const dir=mv.dir||(kind==="deuda"?"debo":"me_deben");
+    if(legacy){ legacy.tgId=mv.id; legacy.kind=kind; legacy.dir=dir; return; }
+    items.unshift({id:uid(), tgId:mv.id, desc:mv.desc, monto:rem, fecha:(mv.date||"").slice(0,10), cat:"Otro", kind, dir, authorChatId:mv.authorChatId});
     added++;
   });
 
@@ -1520,6 +1634,13 @@ function init(){
   if(savedCfg && savedCfg.botUrl && !(state.config && state.config.botUrl && state.config.botToken)){
     state.config.botUrl=savedCfg.botUrl;
     state.config.botToken=savedCfg.botToken||"";
+  }
+  // una sola vez: el presupuesto de gasto con mamá queda en $3,000
+  if(!state.config) state.config={};
+  if(!state.config.gastoMamaMigrado){
+    const mm=syncMonth();
+    if(mm && mm.gasto && mm.gasto.mama) mm.gasto.mama.budget=3000;
+    state.config.gastoMamaMigrado=true;
   }
   state.months.forEach(m=>fillEstimatedDays(m));
   saveState();
