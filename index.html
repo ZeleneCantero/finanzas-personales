@@ -175,6 +175,15 @@
         <div style="font-size:11px;color:var(--muted);margin-top:4px">Debo + apoyo − me deben = neto</div>
       </div>
       <div class="card">
+        <h3>📌 Resumen total del mes</h3>
+        <div class="row"><span>🤝 Con mamá (neto)</span><span id="apNeto">$0</span></div>
+        <div class="row"><span>💳 MSI personales</span><span id="apMsi">$0</span></div>
+        <div class="row"><span>📝 Gastos personales</span><span id="apGastos">$0</span></div>
+        <div class="row"><span>👩 Gasto con mamá</span><span id="apGastoMama">$0</span></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span>💰 Total a pagar al mes</span><span id="apTotal">$0</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Igual que el resumen de Telegram</div>
+      </div>
+      <div class="card">
         <h3>⚡ Captura rápida</h3>
         <div class="grid2" style="margin-bottom:8px">
           <input id="quickInput" placeholder="ej: agregar a mamá 1000 Temu">
@@ -559,6 +568,9 @@ function msiTotal(m,tarjeta){
   const items=tarjeta?m.msi.filter(x=>x.tarjeta===tarjeta):m.msi;
   return items.reduce((s,x)=>s+x.monto,0);
 }
+function msiPendTotal(m){
+  return (m.msi||[]).filter(x=>!(x.pago>=x.total)&&!x.liquidado).reduce((s,x)=>s+(Number(x.monto)||0),0);
+}
 function fijosTotal(m){
   const msi=m.msi.reduce((s,x)=>s+x.monto,0);
   const deuda=m.deudaMama.reduce((s,x)=>s+x.monto,0);
@@ -796,6 +808,14 @@ function renderCuentasMama(){
   set("resApoyo","$"+fmt(c.apoyo));
   set("resNetoLbl", c.neto>=0 ? "Este mes le das" : "Este mes te debe");
   set("resNeto","$"+fmt(Math.abs(c.neto)));
+  // Apartado: resumen de todo + total a pagar al mes (igual que Telegram)
+  const m=currentMonth();
+  const apNeto=Math.abs(c.neto), apMsi=msiPendTotal(m), apGastos=gastoTotal(m,"yo"), apMama=gastoMamaTotal(m);
+  set("apNeto","$"+fmt(apNeto));
+  set("apMsi","$"+fmt(apMsi));
+  set("apGastos","$"+fmt(apGastos));
+  set("apGastoMama","$"+fmt(apMama));
+  set("apTotal","$"+fmt(apNeto+apMsi+apGastos+apMama));
 }
 
 function renderGastos(){
@@ -1768,6 +1788,21 @@ function init(){
     const mm=syncMonth();
     if(mm && mm.gasto && mm.gasto.mama) mm.gasto.mama.budget=3000;
     state.config.gastoMamaMigrado=true;
+  }
+  // MSI de noviembre 2026 que faltaban o estaban adelantados (se liquidan en diciembre)
+  if(!state.config.msiNov2026){
+    const mm=state.months.find(x=>x.id==="2026-11")||syncMonth();
+    if(mm){
+      if(!Array.isArray(mm.msi)) mm.msi=[];
+      [{desc:"cafetera",monto:153,total:4,pago:3,tarjeta:"MercadoPago"},
+       {desc:"vuelo",monto:3143,total:3,pago:2,tarjeta:"MercadoPago"},
+       {desc:"tenis",monto:570,total:3,pago:2,tarjeta:"MercadoPago"}].forEach(x=>{
+        const found=mm.msi.find(it=>String(it.desc||"").toLowerCase()===x.desc);
+        if(found){ found.monto=x.monto; found.total=x.total; found.pago=x.pago; found.liquidado=false; if(!found.tarjeta) found.tarjeta=x.tarjeta; }
+        else mm.msi.push(Object.assign({id:uid()},x));
+      });
+    }
+    state.config.msiNov2026=true;
   }
   state.months.forEach(m=>fillEstimatedDays(m));
   saveState();
