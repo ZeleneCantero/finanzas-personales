@@ -83,6 +83,8 @@
   table{width:100%;border-collapse:collapse;font-size:12px}
   th,td{padding:6px;text-align:left;border-bottom:1px solid #f3f4f6}
   th{color:var(--muted);font-weight:600}
+  .simtable th,.simtable td{font-size:11px;padding:5px 3px;white-space:nowrap}
+  .simtable th:not(:first-child),.simtable td:not(:first-child){text-align:right}
   .hitos{display:flex;gap:6px;flex-wrap:wrap}
   .hito{padding:8px 12px;border-radius:10px;font-size:12px;font-weight:700;background:#e5e7eb;color:var(--muted);min-width:60px;text-align:center}
   .hito.done{background:#d1fae5;color:#065f46}
@@ -207,6 +209,41 @@
       <div class="card">
         <h3>🎯 Meta del millón</h3>
         <div style="font-size:13px" id="metaMini"></div>
+      </div>
+    </div>
+
+    <!-- SIMULACIÓN -->
+    <div class="tab" id="tab-simular">
+      <div class="card">
+        <h3>🔮 Simulación de próximos meses</h3>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Proyección con los pagos actuales del bot. Se actualiza sola cuando avanzan los MSI y las deudas.</div>
+        <div class="grid2" style="margin-bottom:10px">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Meses a mostrar</div>
+            <select id="simMeses" onchange="renderSimulacion()">
+              <option value="6">6 meses</option>
+              <option value="12" selected>12 meses</option>
+              <option value="24">24 meses</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Contar el apoyo</div>
+            <select id="simApoyo" onchange="renderSimulacion()">
+              <option value="1" selected>Sí ($5,000/mes)</option>
+              <option value="0">No</option>
+            </select>
+          </div>
+        </div>
+        <div id="simTotales" class="grid3"></div>
+      </div>
+      <div class="card">
+        <h3>📅 Pagos estimados</h3>
+        <div style="overflow-x:auto"><table id="simTabla" class="simtable"></table></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">Los pagos avanzan el día 13. “Neto” = deuda del mes menos el apoyo recibido.</div>
+      </div>
+      <div class="card">
+        <h3>🧾 Detalle de lo que queda</h3>
+        <div id="simDetalle"></div>
       </div>
     </div>
 
@@ -443,6 +480,7 @@
     <button class="navbtn" data-tab="inversion" onclick="showTab('inversion')"><span class="ic">💰</span>Inversión</button>
     <button class="navbtn" data-tab="rendim" onclick="showTab('rendim')"><span class="ic">📈</span>Rendim.</button>
     <button class="navbtn" data-tab="meta" onclick="showTab('meta')"><span class="ic">🐳</span>Meta</button>
+    <button class="navbtn" data-tab="simular" onclick="showTab('simular')"><span class="ic">🔮</span>Simular</button>
     <button class="navbtn" data-tab="mas" onclick="showTab('mas')"><span class="ic">⚙️</span>Más</button>
   </nav>
 </div>
@@ -625,7 +663,7 @@ function showTab(name){
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
 
 // ---------- RENDER ----------
-function renderAll(){ applyCollapsed(); renderMonthCalendars(); renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderCuentasMama(); renderInversion(); renderRendim(); renderMeta(); renderMas(); renderAlerts(); }
+function renderAll(){ applyCollapsed(); renderMonthCalendars(); renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderCuentasMama(); renderInversion(); renderRendim(); renderSimulacion(); renderMeta(); renderMas(); renderAlerts(); }
 function toggleSec(key){
   if(!state.config) state.config={};
   if(!state.config.deudasCollapsed) state.config.deudasCollapsed={};
@@ -1122,6 +1160,61 @@ function renderMeta(){
     document.getElementById("metaTiempo").innerHTML=`Ritmo promedio últimos ${last3.length} meses: $${fmt(avg)}/mes<br>Tiempo estimado: <b>${monthsNeeded} meses</b> (${(monthsNeeded/12).toFixed(1)} años)<br>🗓️ Llegarás al millón en: <b>${fechaStr}</b>`;
   } else {
     document.getElementById("metaTiempo").innerHTML="Sin datos suficientes para estimar.";
+  }
+}
+
+// ---------- SIMULACIÓN DE PRÓXIMOS MESES ----------
+function addMonthsKey(k,n){ const [y,m]=String(k).split("-").map(Number); const d=new Date(y,(m-1)+n,1); return monthKey(d); }
+function simShort(k){ const n=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]; const [y,m]=String(k).split("-"); return n[(+m)-1]+" "+String(y).slice(2); }
+function simMoney(v){ const n=Number(v)||0; return n<0?"−$"+fmtI(-n):"$"+fmtI(n); }
+function renderSimulacion(){
+  if(!document.getElementById("tab-simular")) return;
+  const m=syncMonth()||currentMonth();
+  const pend=(arr)=>(arr||[]).filter(x=>(Number(x.pago)||0)<(Number(x.total)||0)&&!x.liquidado);
+  const msi=pend(m&&m.msi), tel=pend(m&&m.deudaMama);
+  const apo=Number((m&&m.apoyo)||0);
+  const selN=document.getElementById("simMeses"), selA=document.getElementById("simApoyo");
+  const n=parseInt(selN&&selN.value,10)||12;
+  const conApoyo=!selA || selA.value!=="0";
+  const start=(m&&m.id)||monthKey(new Date());
+  let sumDeuda=0, sumApoyo=0, lastDebt="";
+  const rows=[];
+  for(let i=1;i<=n;i++){
+    const k=addMonthsKey(start,i);
+    const sm=msi.filter(x=>(Number(x.pago)||0)+i<=(Number(x.total)||0)).reduce((s,x)=>s+(Number(x.monto)||0),0);
+    const st=tel.filter(x=>(Number(x.pago)||0)+i<=(Number(x.total)||0)).reduce((s,x)=>s+(Number(x.monto)||0),0);
+    const sa=conApoyo?apo:0;
+    sumDeuda+=sm+st; sumApoyo+=sa;
+    if(sm+st>0) lastDebt=k;
+    rows.push({k,msi:sm,tel:st,apo:sa,deuda:sm+st,neto:sm+st-sa});
+  }
+  const restante=msi.concat(tel).reduce((s,x)=>s+(Number(x.monto)||0)*((Number(x.total)||0)-(Number(x.pago)||0)),0);
+  const tot=document.getElementById("simTotales");
+  if(tot) tot.innerHTML=
+    `<div class="stat"><div class="v">$${fmtI(restante)}</div><div class="l">Deuda por pagar</div></div>`+
+    `<div class="stat"><div class="v">$${fmtI(sumApoyo)}</div><div class="l">Apoyo en el periodo</div></div>`+
+    `<div class="stat"><div class="v">${lastDebt?simShort(lastDebt):"¡Listo!"}</div><div class="l">Último pago de deuda</div></div>`;
+  const tbl=document.getElementById("simTabla");
+  if(tbl){
+    tbl.innerHTML="<thead><tr><th>Mes</th><th>MSI</th><th>Tel/tele</th><th>Apoyo</th><th>Deuda</th><th>Neto</th></tr></thead><tbody>"+
+      rows.map(r=>`<tr><td>${simShort(r.k)}</td><td>$${fmtI(r.msi)}</td><td>$${fmtI(r.tel)}</td><td>$${fmtI(r.apo)}</td><td><b>$${fmtI(r.deuda)}</b></td><td>${simMoney(r.neto)}</td></tr>`).join("")+
+      `</tbody><tfoot><tr><td><b>Total</b></td><td></td><td></td><td><b>$${fmtI(sumApoyo)}</b></td><td><b>$${fmtI(sumDeuda)}</b></td><td><b>${simMoney(sumDeuda-sumApoyo)}</b></td></tr></tfoot>`;
+  }
+  const det=document.getElementById("simDetalle");
+  if(det){
+    let h="";
+    if(msi.length){
+      h+='<div style="font-size:12px;font-weight:700;margin-bottom:4px">💳 MSI pendientes</div>';
+      msi.forEach(x=>{ const q=(Number(x.total)||0)-(Number(x.pago)||0); h+=`<div class="row"><span>${x.tarjeta||""} · ${x.desc||""}</span><span>${q} pago(s) · $${fmtI((Number(x.monto)||0)*q)}</span></div>`; });
+    }
+    if(tel.length){
+      h+='<div style="font-size:12px;font-weight:700;margin:10px 0 4px">📱 Teléfono y tele (mamá)</div>';
+      tel.forEach(x=>{ const q=(Number(x.total)||0)-(Number(x.pago)||0); h+=`<div class="row"><span>${x.desc||""}</span><span>${q} pago(s) · $${fmtI((Number(x.monto)||0)*q)}</span></div>`; });
+    }
+    if(!msi.length && !tel.length) h='<div style="font-size:13px;color:var(--green)">✅ No hay deudas pendientes.</div>';
+    h+=`<div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px;margin-top:6px"><span>Total deuda restante</span><span>$${fmtI(restante)}</span></div>`;
+    h+='<div style="font-size:11px;color:var(--muted);margin-top:8px">No incluye los $3,246 de movimientos sueltos con mamá ni gastos nuevos. El apoyo se asume constante y no es deuda.</div>';
+    det.innerHTML=h;
   }
 }
 
@@ -2084,7 +2177,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=10").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=11").catch(()=>{}); }
 </script>
 </body>
 </html>
