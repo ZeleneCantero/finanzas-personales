@@ -226,17 +226,27 @@
     <div class="tab" id="tab-gastos">
       <div id="alertsBannerGastos"></div>
       <div class="card">
-        <h3>🔴 Debo</h3>
-        <div id="deboList"></div>
-        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span>Total que debo</span><span id="deboTotal">$0</span></div>
+        <h3>🤝 Deudas con mamá</h3>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="btn btn-ghost btn-sm" id="chipDebo" onclick="setMamaFilter('debo')">🔴 Debo</button>
+          <button class="btn btn-ghost btn-sm" id="chipMeDeben" onclick="setMamaFilter('me_deben')">🟢 Me deben</button>
+        </div>
+        <div id="mamaDebtList"></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span id="mamaDebtLbl">Total que debo</span><span id="mamaDebtTotal">$0</span></div>
       </div>
       <div class="card">
-        <h3>🟢 Me deben</h3>
-        <div id="meDebenList"></div>
-        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span>Total que me deben</span><span id="meDebenTotal">$0</span></div>
-      </div>
-      <div class="card">
-        <h3>💸 Gasto variable BBVA</h3>
+        <h3>💸 Gasto variable</h3>
+        <div class="grid2" style="margin-bottom:8px">
+          <div class="stat" style="padding:8px">
+            <div class="v" id="varDeudaMama" style="font-size:17px">$0</div>
+            <div class="l">🔴 Deuda total con mamá</div>
+            <div id="varNetoMama" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+          </div>
+          <div class="stat" style="padding:8px">
+            <div class="v" id="varGastoPersonal" style="font-size:17px">$0</div>
+            <div class="l">🙋 Lo que he gastado (personal)</div>
+          </div>
+        </div>
         <div id="gastoBars"></div>
         <div class="grid2" style="margin-top:8px">
           <div><div style="font-size:11px;color:var(--muted)">Presupuesto con mamá</div><input id="budMama" type="number" style="width:100%" onchange="setBudget('mama',this.value)"></div>
@@ -553,7 +563,7 @@ function fijosTotal(m){
   return msi+deuda+(m.apoyo||0);
 }
 // Los movimientos de Telegram (tgId) son deudas, NO gasto variable: se excluyen de las sumas.
-function gastoTotal(m,who){ return m.gasto[who].items.filter(x=>!x.tgId).reduce((s,x)=>s+x.monto, m.gasto[who].spent||0); }
+function gastoTotal(m,who){ return m.gasto[who].items.filter(x=>!x.tgId).reduce((s,x)=>s+x.monto, 0); }
 function totalSaved(){
   const base = (state.config && state.config.savedBase) ? state.config.savedBase : 0;
   return base + state.months.reduce((s,m)=>s+(m.inversion.q1||0)+(m.inversion.q2||0)+(m.inversion.rendimiento||0),0);
@@ -726,22 +736,37 @@ function filaDeuda(it){
 }
 function renderCuentasMama(){
   const c=cuentasMama();
-  const dl=document.getElementById("deboList");
-  if(dl){
-    dl.innerHTML="";
-    if(!c.deboMov.length && !c.msi.length) dl.innerHTML="<div style='color:var(--muted);font-size:13px'>Nada pendiente 🎉</div>";
-    c.deboMov.forEach(it=>dl.appendChild(filaDeuda(it)));
-    c.msi.forEach(it=>dl.appendChild(filaDeuda(it)));
-    const t=document.getElementById("deboTotal"); if(t) t.textContent="$"+fmt(c.totalDebo);
+  const filtro=(state.config && state.config.mamaFilter) || "debo";
+
+  // chips (igual que el filtro de Deudas)
+  [["debo","chipDebo"],["me_deben","chipMeDeben"]].forEach(([f,id])=>{
+    const b=document.getElementById(id);
+    if(!b) return;
+    if(f===filtro){ b.style.background="var(--pink)"; b.style.color="#fff"; }
+    else { b.style.background=""; b.style.color=""; }
+  });
+
+  const lista=document.getElementById("mamaDebtList");
+  if(lista){
+    lista.innerHTML="";
+    const items = filtro==="debo" ? [...c.deboMov, ...c.msi] : c.meDeben;
+    if(!items.length){
+      lista.innerHTML = filtro==="debo"
+        ? "<div style='color:var(--muted);font-size:13px'>Nada pendiente 🎉</div>"
+        : "<div style='color:var(--muted);font-size:13px'>Nadie te debe 🎉</div>";
+    }
+    items.forEach(it=>lista.appendChild(filaDeuda(it)));
+    const lbl=document.getElementById("mamaDebtLbl");
+    const tot=document.getElementById("mamaDebtTotal");
+    if(lbl) lbl.textContent = filtro==="debo" ? "Total que debo" : "Total que me deben";
+    if(tot) tot.textContent = "$"+fmt(filtro==="debo" ? c.totalDebo : c.totalMeDeben);
   }
-  const ml=document.getElementById("meDebenList");
-  if(ml){
-    ml.innerHTML="";
-    if(!c.meDeben.length) ml.innerHTML="<div style='color:var(--muted);font-size:13px'>Nadie te debe 🎉</div>";
-    c.meDeben.forEach(it=>ml.appendChild(filaDeuda(it)));
-    const t=document.getElementById("meDebenTotal"); if(t) t.textContent="$"+fmt(c.totalMeDeben);
-  }
+
   const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
+  // Gasto variable: deuda con mamá + lo que ella sí ha gastado (personal)
+  set("varDeudaMama","$"+fmt(c.totalDebo));
+  set("varNetoMama","Neto del mes: $"+fmt(c.neto));
+  set("varGastoPersonal","$"+fmt(gastoTotal(currentMonth(),"yo")));
   set("resDebo","$"+fmt(c.totalDebo));
   set("resMeDeben","$"+fmt(c.totalMeDeben));
   set("resApoyo","$"+fmt(c.apoyo));
@@ -762,7 +787,7 @@ function renderGastos(){
     const div=document.createElement("div");
     div.style.marginBottom="10px";
     div.innerHTML=`
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${who==="mama"?"👩 Con mamá":"🙋 Yo"}</span><span>$${fmt(spent)} / $${fmt(g.budget)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${who==="mama"?"👩 Gasto con mamá":"🙋 Gasto personal"}</span><span>$${fmt(spent)} / $${fmt(g.budget)}</span></div>
       <div class="msi-progress"><div class="msi-fill" style="width:${pct}%;background:${over?'var(--red)':'var(--green)'}"></div></div>
     `;
     wrap.appendChild(div);
@@ -983,6 +1008,11 @@ function setApoyo(v){
   m.apoyo=parseFloat(v)||0;
   saveState(); renderAll();
   syncToBot(true).catch(()=>{});
+}
+function setMamaFilter(f){
+  if(!state.config) state.config={};
+  state.config.mamaFilter=f;
+  saveState(); renderCuentasMama();
 }
 function setDeudaFilter(f){
   if(!state.config) state.config={};
