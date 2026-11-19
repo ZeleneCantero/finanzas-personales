@@ -168,20 +168,26 @@
       </div>
       <div class="card">
         <h3>🤝 Cuentas con mamá</h3>
-        <div class="row"><span>🔴 Debo</span><span id="resDebo" style="font-weight:700">$0</span></div>
+        <div class="row"><span>🔴 Lo que le debo</span><span id="resDebo" style="font-weight:700">$0</span></div>
+        <div class="row"><span>📱 Teléfono y tele (pagos fijos)</span><span id="resTelTele">$0</span></div>
         <div class="row"><span>🟢 Me deben</span><span id="resMeDeben" style="font-weight:700">$0</span></div>
         <div class="row"><span>💝 Apoyo del mes</span><span id="resApoyo">$0</span></div>
         <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span id="resNetoLbl">Este mes le das</span><span id="resNeto">$0</span></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Debo + apoyo − me deben = neto</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Lo que le debo + teléfono y tele + apoyo − me deben = neto</div>
       </div>
       <div class="card">
         <h3>📌 Resumen total del mes</h3>
-        <div class="row"><span>🤝 Con mamá (neto)</span><span id="apNeto">$0</span></div>
-        <div class="row"><span>💳 MSI personales</span><span id="apMsi">$0</span></div>
-        <div class="row"><span>📝 Gastos personales</span><span id="apGastos">$0</span></div>
-        <div class="row"><span>👩 Gasto con mamá</span><span id="apGastoMama">$0</span></div>
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px">Lo que pagas a mamá</div>
+        <div class="row"><span>🔴 Lo que le debo</span><span id="apDebo">$0</span></div>
+        <div class="row"><span>📱 Teléfono y tele</span><span id="apTelTele">$0</span></div>
+        <div class="row"><span>💝 Apoyo</span><span id="apApoyo">$0</span></div>
+        <div class="row"><span>🟢 Menos: lo que me deben</span><span id="apMeDeben">$0</span></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span>Neto que le das a mamá</span><span id="apNeto">$0</span></div>
+        <div style="font-size:12px;font-weight:700;margin-top:8px">Lo que pagas de tus deudas</div>
+        <div class="row"><span>💳 Mis MSI</span><span id="apMsi">$0</span></div>
         <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span>💰 Total a pagar al mes</span><span id="apTotal">$0</span></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Igual que el resumen de Telegram</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Es el neto con mamá + tus MSI. No incluye gastos personales porque ya los gastaste.</div>
+        <div class="row" style="margin-top:6px"><span>📝 Gastos personales (aparte)</span><span id="apGastos">$0</span></div>
       </div>
       <div class="card">
         <h3>⚡ Captura rápida</h3>
@@ -240,9 +246,11 @@
           <button class="btn btn-ghost btn-sm" id="chipDebo" onclick="setMamaFilter('debo')">🔴 Debo</button>
           <button class="btn btn-ghost btn-sm" id="chipMeDeben" onclick="setMamaFilter('me_deben')">🟢 Me deben</button>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">El chip <b>Debo</b> y el gasto variable incluyen iPhone y tele, igual que en Telegram.</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Teléfono y tele son pagos fijos: se muestran aparte de lo que le debes.</div>
         <div id="mamaDebtList"></div>
-        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px"><span id="mamaDebtLbl">Total que debo</span><span id="mamaDebtTotal">$0</span></div>
+        <div class="row"><span id="mamaDebtLbl">🔴 Lo que le debo (movimientos)</span><span id="mamaDebtTotal">$0</span></div>
+        <div class="row" id="mamaExtras"><span>📱 Teléfono y tele (pagos fijos)</span><span id="mamaTelTele">$0</span></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px" id="mamaTotalRow"><span>Total con mamá</span><span id="mamaTotalMama">$0</span></div>
       </div>
       <div class="card">
         <h3>💸 Gasto variable</h3>
@@ -250,13 +258,14 @@
           <div class="stat" style="padding:8px">
             <div class="v" id="varDeudaMama" style="font-size:17px">$0</div>
             <div class="l">🔴 Lo que le debo a mamá</div>
-            <div id="varNetoMama" style="font-size:11px;color:var(--muted);margin-top:2px">Incluye iPhone y tele · igual que Telegram</div>
+            <div id="varNetoMama" style="font-size:11px;color:var(--muted);margin-top:2px">Solo lo que le debes; iPhone y tele van aparte</div>
           </div>
           <div class="stat" style="padding:8px">
             <div class="v" id="varGastoPersonal" style="font-size:17px">$0</div>
             <div class="l">🙋 Lo que he gastado (personal)</div>
           </div>
         </div>
+        <div class="row"><span>📱 Teléfono y tele (pagos fijos)</span><span id="varTelTele">$0</span></div>
         <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px;margin-top:4px"><span>Total gasto variable</span><span id="varTotal">$0</span></div>
         <div id="gastoBars"></div>
         <div class="grid2" style="margin-top:8px">
@@ -571,6 +580,9 @@ function msiTotal(m,tarjeta){
 function msiPendTotal(m){
   return (m.msi||[]).filter(x=>!(x.pago>=x.total)&&!x.liquidado).reduce((s,x)=>s+(Number(x.monto)||0),0);
 }
+function msiMamaPendTotal(m){
+  return ((m&&m.deudaMama)||[]).filter(x=>!(x.pago>=x.total)&&!x.liquidado).reduce((s,x)=>s+(Number(x.monto)||0),0);
+}
 function fijosTotal(m){
   const msi=m.msi.reduce((s,x)=>s+x.monto,0);
   const deuda=m.deudaMama.reduce((s,x)=>s+x.monto,0);
@@ -591,12 +603,9 @@ function deudaMamaDelMes(mesId){
     .reduce((s,x)=>s+(Number(x.monto)||0),0);
 }
 // Deuda con mamá = movimientos + iPhone y tele pendientes del mes (como en Telegram).
-function deudaMamaTotalDelMes(m){
-  const msi=((m&&m.deudaMama)||[]).filter(x=>!(x.pago>=x.total)&&!x.liquidado).reduce((s,x)=>s+(Number(x.monto)||0),0);
-  return deudaMamaDelMes(m.id)+msi;
-}
-// Gasto variable = deuda con mamá + lo que ella ha gastado.
-function gastoVariableTotal(m){ return gastoTotal(m,"mama")+gastoTotal(m,"yo")+deudaMamaTotalDelMes(m); }
+function deudaMamaTotalDelMes(m){ return deudaMamaDelMes(m.id)+msiMamaPendTotal(m); }
+// Gasto variable = lo que le debe (movimientos) + lo que ella ha gastado. iPhone y tele van aparte.
+function gastoVariableTotal(m){ return gastoTotal(m,"mama")+gastoTotal(m,"yo")+deudaMamaDelMes(m.id); }
 // Lo gastado con mamá en el mes = movimientos que le debo + gastos sueltos con ella.
 function gastoMamaTotal(m){ return deudaMamaDelMes(m.id)+gastoTotal(m,"mama"); }
 function totalSaved(){
@@ -781,6 +790,7 @@ function renderCuentasMama(){
     else { b.style.background=""; b.style.color=""; }
   });
 
+  const setEl=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
   const lista=document.getElementById("mamaDebtList");
   if(lista){
     lista.innerHTML="";
@@ -793,29 +803,39 @@ function renderCuentasMama(){
     items.forEach(it=>lista.appendChild(filaDeuda(it)));
     const lbl=document.getElementById("mamaDebtLbl");
     const tot=document.getElementById("mamaDebtTotal");
-    if(lbl) lbl.textContent = filtro==="debo" ? "Total que debo" : "Total que me deben";
-    if(tot) tot.textContent = "$"+fmt(filtro==="debo" ? c.totalDebo : c.totalMeDeben);
+    if(lbl) lbl.textContent = filtro==="debo" ? "🔴 Lo que le debo (movimientos)" : "Total que me deben";
+    if(tot) tot.textContent = "$"+fmt(filtro==="debo" ? c.totalDeboMov : c.totalMeDeben);
+    const ex=document.getElementById("mamaExtras"), tr=document.getElementById("mamaTotalRow");
+    if(ex) ex.style.display=filtro==="debo"?"":"none";
+    if(tr) tr.style.display=filtro==="debo"?"":"none";
+    setEl("mamaTelTele","$"+fmt(c.totalMsi));
+    setEl("mamaTotalMama","$"+fmt(c.totalDebo));
   }
 
   const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
-  // Gasto variable: deuda con mamá (igual que Telegram) + lo que ella ha gastado
-  set("varDeudaMama","$"+fmt(c.totalDebo));
-  set("varNetoMama","Incluye iPhone y tele · igual que Telegram");
+  // Gasto variable: solo lo que le debe + lo que ella ha gastado. Teléfono y tele van aparte.
+  set("varDeudaMama","$"+fmt(c.totalDeboMov));
+  set("varNetoMama","Solo lo que le debes; iPhone y tele van aparte");
+  set("varTelTele","$"+fmt(c.totalMsi));
   set("varGastoPersonal","$"+fmt(gastoTotal(currentMonth(),"yo")));
   set("varTotal","$"+fmt(gastoVariableTotal(currentMonth())));
-  set("resDebo","$"+fmt(c.totalDebo));
+  set("resDebo","$"+fmt(c.totalDeboMov));
+  set("resTelTele","$"+fmt(c.totalMsi));
   set("resMeDeben","$"+fmt(c.totalMeDeben));
   set("resApoyo","$"+fmt(c.apoyo));
   set("resNetoLbl", c.neto>=0 ? "Este mes le das" : "Este mes te debe");
   set("resNeto","$"+fmt(Math.abs(c.neto)));
-  // Apartado: resumen de todo + total a pagar al mes (igual que Telegram)
+  // Apartado: pagos de mamá + mis MSI = total a pagar al mes
   const m=currentMonth();
-  const apNeto=Math.abs(c.neto), apMsi=msiPendTotal(m), apGastos=gastoTotal(m,"yo"), apMama=gastoMamaTotal(m);
+  const apNeto=Math.abs(c.neto), apMsi=msiPendTotal(m);
+  set("apDebo","$"+fmt(c.totalDeboMov));
+  set("apTelTele","$"+fmt(c.totalMsi));
+  set("apApoyo","$"+fmt(c.apoyo));
+  set("apMeDeben","−$"+fmt(c.totalMeDeben));
   set("apNeto","$"+fmt(apNeto));
   set("apMsi","$"+fmt(apMsi));
-  set("apGastos","$"+fmt(apGastos));
-  set("apGastoMama","$"+fmt(apMama));
-  set("apTotal","$"+fmt(apNeto+apMsi+apGastos+apMama));
+  set("apTotal","$"+fmt(apNeto+apMsi));
+  set("apGastos","$"+fmt(gastoTotal(m,"yo")));
 }
 
 function renderGastos(){
