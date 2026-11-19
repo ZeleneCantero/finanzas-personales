@@ -864,6 +864,7 @@ function setApoyo(v){
   const m=currentMonth();
   m.apoyo=parseFloat(v)||0;
   saveState(); renderAll();
+  syncToBot(true).catch(()=>{});
 }
 function setDeudaFilter(f){
   if(!state.config) state.config={};
@@ -903,6 +904,7 @@ function saveGasto(){
   const m=currentMonth();
   m.gasto[who].items.unshift({id:uid(),desc,monto,fecha,cat});
   saveState(); closeModal(); renderAll(); toast("Gasto agregado");
+  syncToBot(true).catch(()=>{});
 }
 function delGasto(id,who){
   const m=currentMonth();
@@ -932,6 +934,7 @@ function saveMsi(){
   const m=currentMonth();
   m.msi.push({id:uid(),tarjeta,desc,monto,total,pago});
   saveState(); closeModal(); renderAll(); toast("MSI agregado");
+  syncToBot(true).catch(()=>{});
 }
 function openMamaModal(){
   const html=`<h3>Movimiento con mamá</h3>
@@ -953,6 +956,7 @@ function saveMama(){
   const m=currentMonth();
   m.deudaMama.push({id:uid(),desc,monto,total:t,pago:p});
   saveState(); closeModal(); renderAll(); toast("Movimiento agregado");
+  syncToBot(true).catch(()=>{});
 }
 function setInv(field,v){
   const m=currentMonth();
@@ -1031,6 +1035,7 @@ function quickAdd(){
     saveState();
     const spent=m.gasto[who].items.reduce((s,x)=>s+x.monto,m.gasto[who].spent||0);
     addMsg("Bot",`✅ Agregado: ${mama?"Mamá":"Yo"} · $${fmt(monto)} · ${desc}\nGasto ${mama?"mamá":"yo"}: $${fmt(spent)} / $${fmt(m.gasto[who].budget)}`);
+    syncToBot(true).catch(()=>{});
   } else {
     addMsg("Bot","❓ No entendí el monto. Ej: 'agregar a mamá 1000 Temu'");
   }
@@ -1186,23 +1191,23 @@ function pdfMama(){
 // bot sync
 function setBotUrl(v){ state.config.botUrl=(v||"").trim().replace(/\/+$/,""); saveState(); }
 function setBotToken(v){ state.config.botToken=(v||"").trim(); saveState(); }
-async function syncToBot(){
-  const url=(state.config.botUrl||"").trim(); const token=(state.config.botToken||"").trim();
-  if(!url||!token){ toast("Falta URL o token"); return; }
+async function syncToBot(silent){
+  const url=(state.config?.botUrl||"").trim().replace(/\/+$/,""); const token=(state.config?.botToken||"").trim();
+  if(!url||!token){ if(!silent) toast("Falta URL o token"); return; }
   const m=currentMonth();
   const summary=buildResumenTexto(m);
   try{
-    await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama,apoyo:m.apoyo})});
-    toast("Sincronizado");
-  }catch(e){ toast("Error de red"); }
+    await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({summary,mamaAccount:m.deudaMama,apoyo:m.apoyo,msi:m.msi,gasto:m.gasto})});
+    if(!silent) toast("Sincronizado");
+  }catch(e){ if(!silent) toast("Error de red"); }
 }
-async function importFromBot(){
-  const url=(state.config.botUrl||"").trim(); const token=(state.config.botToken||"").trim();
-  if(!url||!token){ toast("Falta URL o token"); return; }
+async function importFromBot(silent){
+  const url=(state.config?.botUrl||"").trim().replace(/\/+$/,""); const token=(state.config?.botToken||"").trim();
+  if(!url||!token){ if(!silent) toast("Falta URL o token"); return; }
   try{
     const r=await fetch(url+"/api/ledger",{headers:{"X-Auth-Token":token}});
     const {ledger}=await r.json();
-    if(!Array.isArray(ledger)){ toast("Sin datos"); return; }
+    if(!Array.isArray(ledger)){ if(!silent) toast("Sin datos"); return; }
     if(!state.config.importedIds) state.config.importedIds=[];
     const m=currentMonth();
     let added=0;
@@ -1213,8 +1218,8 @@ async function importFromBot(){
       added++;
     });
     saveState(); renderAll();
-    toast(added>0?`Importados ${added} cobros de Telegram`:"Sin cobros nuevos");
-  }catch(e){ console.error(e); toast("Error: "+(e.message||"red")); }
+    if(!silent) toast(added>0?`Importados ${added} cobros de Telegram`:"Sin cobros nuevos");
+  }catch(e){ console.error(e); if(!silent) toast("Error: "+(e.message||"red")); }
 }
 
 // copy
@@ -1316,6 +1321,11 @@ function init(){
   saveState();
   renderAll();
   checkNotifications();
+  // auto-sync with Telegram if configured
+  if(state.config && state.config.botUrl && state.config.botToken){
+    syncToBot(true).catch(()=>{});
+    importFromBot(true).catch(()=>{});
+  }
 }
 init();
 if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
