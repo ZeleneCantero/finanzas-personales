@@ -1213,7 +1213,7 @@ async function importFromBot(){
     });
     saveState(); renderAll();
     toast(added>0?`Importados ${added} cobros de Telegram`:"Sin cobros nuevos");
-  }catch(e){ toast("Error de red"); }
+  }catch(e){ console.error(e); toast("Error: "+(e.message||"red")); }
 }
 
 // copy
