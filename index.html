@@ -144,6 +144,11 @@
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   }
+  /* Selector de tema con radio buttons */
+  .theme-opts{display:flex;flex-direction:column;gap:6px}
+  .theme-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:border-color .15s,background .15s,color .15s}
+  .theme-opt.selected{border-color:var(--pink);background:var(--pink-light);color:var(--pink-dark)}
+  .theme-opt input{accent-color:var(--pink);width:16px;height:16px;margin:0;cursor:pointer;flex:none}
   body.dark input,body.dark select,body.dark textarea{background:#0f172a;color:#e5e7eb;border-color:#334155}
   body.dark .modal{background:#16213e;color:#e5e7eb}
   body.dark .msi-item{background:#1e293b}
@@ -467,8 +472,12 @@
       </div>
       <div class="card">
         <h3>🌙 Apariencia</h3>
-        <button class="btn btn-ghost btn-sm" onclick="toggleDark()">Alternar modo oscuro</button>
-        <button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="toggleCompact()">Alternar modo compacto</button>
+        <div class="theme-opts" role="radiogroup" aria-label="Tema de la aplicación">
+          <label class="theme-opt"><input type="radio" name="themeMode" value="system" onchange="setThemeMode(this.value)"><span>🖥️ Predeterminado del sistema</span></label>
+          <label class="theme-opt"><input type="radio" name="themeMode" value="light" onchange="setThemeMode(this.value)"><span>☀️ Claro</span></label>
+          <label class="theme-opt"><input type="radio" name="themeMode" value="dark" onchange="setThemeMode(this.value)"><span>🌙 Oscuro</span></label>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="toggleCompact()">Alternar modo compacto</button>
       </div>
       <div class="card">
         <h3>🔗 Sincronización</h3>
@@ -1276,6 +1285,11 @@ function renderSimulacion(){
 function renderMas(){
   const bu=document.getElementById("botUrl"); if(bu) bu.value=state.config.botUrl||"";
   const bt=document.getElementById("botToken"); if(bt) bt.value=state.config.botToken||"";
+  const mode=getThemeMode();
+  document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
+    r.checked=(r.value===mode);
+    const opt=r.closest(".theme-opt"); if(opt) opt.classList.toggle("selected",r.value===mode);
+  });
   renderBotCfgState();
 }
 
@@ -2028,18 +2042,43 @@ function renderSyncStatus(){
   el.className="sync-status ok";
 }
 
-function toggleDark(){
-  const on=!document.body.classList.contains("dark");
-  document.body.classList.toggle("dark",on);
-  document.body.classList.toggle("light",!on);
-  state.config.dark=on;
-  saveState(); toast(on?"Modo oscuro activado":"Modo claro activado");
+// Tema: "system" | "light" | "dark". Se guarda por dispositivo (no se sincroniza).
+function getThemeMode(){
+  const cfg=state.config||{};
+  if(cfg.themeMode==="system"||cfg.themeMode==="light"||cfg.themeMode==="dark") return cfg.themeMode;
+  // Migración del interruptor anterior (dark: boolean)
+  if(typeof cfg.dark==="boolean") return cfg.dark?"dark":"light";
+  return "system";
 }
-function applyDark(){
-  const pref=state.config && state.config.dark;
-  document.body.classList.toggle("dark",pref===true);
-  document.body.classList.toggle("light",pref===false);
-  // si no hay preferencia guardada, se sigue el tema del sistema
+function systemPrefersDark(){
+  return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
+function applyTheme(){
+  const mode=getThemeMode();
+  const dark = mode==="dark" || (mode==="system" && systemPrefersDark());
+  document.body.classList.toggle("dark",dark);
+  document.body.classList.toggle("light",!dark);
+}
+function setThemeMode(mode){
+  if(mode!=="system"&&mode!=="light"&&mode!=="dark") return;
+  state.config=state.config||{};
+  state.config.themeMode=mode;
+  // Campo antiguo coherente por si algo más lo consulta
+  state.config.dark = mode==="dark" ? true : (mode==="light" ? false : undefined);
+  applyTheme();
+  saveState();
+  renderMas();
+  haptic(10);
+  toast("Tema: "+({system:"Predeterminado del sistema",light:"Claro",dark:"Oscuro"}[mode]));
+}
+// Alias por compatibilidad
+function applyDark(){ applyTheme(); }
+function watchSystemTheme(){
+  if(!window.matchMedia) return;
+  const mq=window.matchMedia("(prefers-color-scheme: dark)");
+  const onChange=()=>{ if(getThemeMode()==="system") applyTheme(); };
+  if(mq.addEventListener) mq.addEventListener("change",onChange);
+  else if(mq.addListener) mq.addListener(onChange);
 }
 function toggleCompact(){
   document.body.classList.toggle("compact");
@@ -2118,7 +2157,8 @@ function checkNotifications(){
 // init
 function addOneMonth(k){ const [y,m]=k.split("-").map(Number); const d=new Date(y,m,1); d.setMonth(d.getMonth()+1); return monthKey(d); }
 function init(){
-  applyDark();
+  applyTheme();
+  watchSystemTheme();
   applyCompact();
   // Enlace de configuración personal: ?setup=base64(url|token). Se usa una sola vez.
   try{
@@ -2240,7 +2280,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=12").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=13").catch(()=>{}); }
 </script>
 </body>
 </html>
