@@ -305,11 +305,7 @@
         <h3>📄 PDF mensual</h3>
         <button class="btn" onclick="pdfMensual()">Generar PDF del mes</button>
       </div>
-      <div class="card">
-        <h3>📋 Resumen para copiar (WhatsApp/Telegram)</h3>
-        <textarea id="resumenTxt" rows="8" readonly></textarea>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="copyResumen()">Copiar</button>
-      </div>
+
       <div class="card">
         <h3>⚙️ Mes</h3>
         <div class="grid2">
@@ -329,13 +325,14 @@
         <button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="toggleCompact()">Alternar modo compacto</button>
       </div>
       <div class="card">
-        <h3>🤖 Bot de Telegram</h3>
-        <div style="font-size:12px;color:var(--muted)">Configura la URL del worker en ajustes.</div>
-        <input id="botUrl" placeholder="https://...workers.dev" onchange="setBotUrl(this.value)" style="margin-top:6px">
-        <input id="botToken" placeholder="ARTIFACT_TOKEN" onchange="setBotToken(this.value)" style="margin-top:6px">
-        <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="syncToBot()">Sincronizar ahora</button>
-        <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="importFromBot()">⬇️ Importar cobros de Telegram</button>
-      </div>
+        <h3>🔗 Sincronización</h3>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Los datos se sincronizan automáticamente con Telegram.</div>
+        <button class="btn btn-ghost btn-sm" onclick="toggleBotConfig()">⚙️ Configurar</button>
+        <div id="botConfig" class="hidden" style="margin-top:8px">
+          <input id="botUrl" placeholder="https://...workers.dev" onchange="setBotUrl(this.value)" style="margin-top:6px">
+          <input id="botToken" placeholder="ARTIFACT_TOKEN" onchange="setBotToken(this.value)" style="margin-top:6px">
+        </div>
+
     </div>
   </main>
 
@@ -811,13 +808,8 @@ function renderMeta(){
 }
 
 function renderMas(){
-  document.getElementById("botUrl").value=state.config.botUrl||"";
-  document.getElementById("botToken").value=state.config.botToken||"";
-  // resumen texto
-  const m=currentMonth();
-  const txt=buildResumenTexto(m);
-  document.getElementById("resumenTxt").value=txt;
-}
+  const bu=document.getElementById("botUrl"); if(bu) bu.value=state.config.botUrl||"";
+  const bt=document.getElementById("botToken"); if(bt) bt.value=state.config.botToken||"";
 
 function buildResumenTexto(m){
   const bbva=msiTotal(m,"BBVA");
@@ -1239,6 +1231,18 @@ function toggleCompact(){
   saveState(); toast(state.config.compact?"Modo compacto activado":"Modo normal activado");
 }
 function applyCompact(){ if(state.config && state.config.compact) document.body.classList.add("compact"); }
+function toggleBotConfig(){
+  const c=document.getElementById("botConfig");
+  if(c) c.classList.toggle("hidden");
+}
+function renderBotStatus(){
+  const el=document.getElementById("botStatus");
+  if(!el) return;
+  const url=(state.config?.botUrl||"").trim();
+  const token=(state.config?.botToken||"").trim();
+  if(url && token){ el.textContent="✅ Conectado a Telegram (sincronización automática activa)"; el.style.color="var(--green)"; }
+  else { el.textContent="⚠️ No configurado. Pulsa \"Configurar bot\" para conectar."; el.style.color="var(--amber)"; }
+}
 function launchConfetti(){
   const canvas=document.getElementById("confettiCanvas");
   if(!canvas) return;
