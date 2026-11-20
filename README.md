@@ -35,7 +35,7 @@ El aviso llega por dos vías, sin depender de que la app esté abierta:
 ### Hora del aviso
 En "Más → Notificaciones → Hora del aviso diario" eliges la hora (0–23). El selector guarda el valor en el dispositivo y lo envía al Worker con `POST /api/push/hora` (clave `artifact:avisoHora`). El Worker corre una vez por hora (`0 * * * *`) y dispara cuando llega esa hora en México (UTC-6); si se cayó el Worker en ese minuto, recupera el aviso en la siguiente hora. El valor vuelve a la app con `/api/sync`, así que se mantiene entre dispositivos.
 
-Hay **un solo guard de "ya avisó hoy"** en el Worker (`/api/aviso`, marca `rendSent:YYYY-MM-DD`): la app lo reclama antes de mostrar su notificación local y el cron respeta esa marca. Así llega **un solo aviso al día**, sin importar si estás con la app abierta, con Web Push o en Telegram. Si no hay conexión con el bot, la app usa su guard local para no perder el aviso.
+Hay **un solo guard de "ya avisó hoy"** en el Worker (`/api/aviso`, marca `rendSent:YYYY-MM-DD`): la app solo muestra su notificación local si ya pasó la hora elegida y reclama el día; el cron respeta esa marca. Así llega **un solo aviso al día**, sin importar si estás con la app abierta, con Web Push o en Telegram. Si no hay conexión con el bot, la app usa su guard local para no perder el aviso.
 
 ## Funcionamiento offline
 La app funciona sin internet: el HTML se sirve *network-first* y las librerías de gráficas y PDF (`vendor/chart.umd.min.js` y `vendor/jspdf.umd.min.js`) se sirven desde el mismo sitio y se precachean en el service worker (`finanzas-v26`). El SW **nunca** cachea `/api/` ni recursos de otros dominios. Si subes una versión nueva de esas librerías, sube también el número de caché y el `?v=` del registro en `index.html`.

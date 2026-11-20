@@ -2654,6 +2654,11 @@ async function checkNotifications(){
   // aviso diario de rendimiento: uno solo entre app, push y Telegram
   const hoy=todayKey();
   if(state.config.lastRendNotif===hoy || Math.abs(rendNotificacionHoy())<=0.001) return;
+  // La notificación local tampoco adelanta el aviso: espera a la hora elegida.
+  const rawHora=state.config.avisoHora;
+  const cfgHora=(rawHora==null||rawHora==="")?9:Number(rawHora);
+  const hora=Number.isInteger(cfgHora)&&cfgHora>=0&&cfgHora<=23?cfgHora:9;
+  if(now.getHours()<hora) return;
   if(!state.config.notificationsEnabled || typeof Notification==="undefined" || Notification.permission!=="granted") return;
   const reclamo=await avisoBot("claim",hoy);
   if(reclamo.claimed===false) return;
