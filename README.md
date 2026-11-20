@@ -24,7 +24,14 @@ En **Rendim.** se capturan el saldo de ayer y el de hoy. La diferencia entre amb
 - "Más → PDF mensual" genera el PDF del mes.
 
 ## Notificaciones
-Actívalas en "Más → Notificaciones". La app avisa una vez al día con lo que generó el dinero ese día, usando la tasa calculada a partir de tus saldos. También avisa cuando se crea el mes nuevo. El aviso diario se muestra mientras la app esté abierta; para recibirlo con la app cerrada haría falta Web Push (VAPID) o un mensaje programado del bot.
+Actívalas una sola vez en "Más → Notificaciones". La app avisa una vez al día con lo que generó el dinero ese día, usando la tasa calculada a partir de tus saldos. También avisa cuando se crea el mes nuevo.
+
+El aviso llega por dos vías, sin depender de que la app esté abierta:
+
+- **Web Push (VAPID):** notificación del sistema aunque la PWA esté cerrada. Al tocarla se abre directamente la sección de rendimiento. La clave pública va en la app; la privada es un secreto del Worker (`VAPID_PRIVATE_KEY`). Si ya habías dado permiso, la suscripción se renueva sola al abrir la app.
+- **Telegram:** el bot envía el mismo aviso cada día a las 9:00 (15:00 UTC), **solo al chat de Zelene**. La app sincroniza los saldos al Worker en `/api/sync` y el job usa `artifact:rendimiento`. No se envía a mamá.
+
+Ambas vías tienen guard de "ya enviado hoy" para no duplicar. Si hay suscripción push, se usa; si no, el mensaje de Telegram sigue llegando igual.
 - Deudas → "PDF para mamá".
 
 ## Telegram
