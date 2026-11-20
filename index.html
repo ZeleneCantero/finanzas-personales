@@ -215,7 +215,7 @@
           <div class="stat"><div class="v" id="stInv">$0</div><div class="l">Invertido</div></div>
         </div>
         <div class="row" style="margin-top:8px;border-top:1px solid var(--line);padding-top:7px">
-          <span>🗓️ Depósito de ahorro <span style="font-size:11px;color:var(--muted)">(2ª quincena)</span></span>
+          <span>🗓️ Depósito de ahorro <span style="font-size:11px;color:var(--muted)">(día 29)</span></span>
           <span id="resDeposito" style="font-weight:700;font-size:12px;text-align:right"></span>
         </div>
       </div>
@@ -401,7 +401,7 @@
         <h3 id="invMesLbl">💰 Aportaciones de este mes</h3>
         <div class="grid2">
           <div>
-            <label style="font-size:11px;color:var(--muted)" title="Tu empresa deposita el 14 de cada mes (viernes anterior si es fin de semana)">2ª quincena · tu ahorro</label>
+            <label style="font-size:11px;color:var(--muted)" title="Tu empresa deposita el día 29 de cada mes (viernes anterior si cae en fin de semana)">Día 29 · tu ahorro</label>
             <input type="number" id="q2" onchange="setInv('q2',this.value)">
           </div>
         </div>
@@ -410,7 +410,7 @@
       </div>
       <div class="card">
         <h3>📈 Rendimiento del mes</h3>
-        <input type="number" id="rendMes" placeholder="Rendimiento que te dan al mes" onchange="setRendMes(this.value)">
+        <input type="number" id="rendMes" placeholder="Proyección calculada" readonly>
         <div id="rendMesNota" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
       </div>
       <div class="card">
@@ -431,16 +431,29 @@
         <div style="font-size:11px;color:var(--muted);margin-top:5px" id="rendProgreso"></div>
       </div>
       <div class="card">
+        <h3>⚙️ Saldos para calcular la tasa</h3>
+        <div class="grid2">
+          <input id="saldoAyer" type="number" inputmode="decimal" step="0.01" placeholder="Saldo de ayer" onchange="setRendSaldos()">
+          <input id="saldoHoy" type="number" inputmode="decimal" step="0.01" placeholder="Saldo de hoy" onchange="setRendSaldos()">
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px" id="rendTasaInfo"></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="usarHoyComoAyer()">🔄 El saldo de hoy pasa a ser el de ayer</button>
+      </div>
+      <div class="card">
         <h3>🗓️ Elige un mes</h3>
         <div id="calRend" class="month-cal"></div>
+      </div>
+      <div class="card">
+        <h3>📅 Día a día</h3>
+        <div id="rendDiarioList" style="max-height:320px;overflow:auto"></div>
       </div>
       <div class="card">
         <h3>📆 Rendimiento por semana</h3>
         <div class="week-grid" id="weekGrid"></div>
         <div style="margin-top:8px;font-size:13px" id="rendTotals"></div>
       </div>
-      <div class="card">
-        <h3>✏️ Capturar semanas</h3>
+      <div class="card" id="rendWeeksCard">
+        <h3>✏️ Ajustar semanas (meses anteriores)</h3>
         <div id="rendWeeks"></div>
         <button class="btn btn-sm" style="margin-top:8px" onclick="saveSemanas()">Guardar</button>
       </div>
@@ -467,7 +480,7 @@
           <input id="abonoInput" type="number" inputmode="decimal" placeholder="monto (ej: 5000)">
           <button class="btn" onclick="addAbono()">Abonar</button>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-top:6px">Se suma al ahorro de la 2ª quincena de este mes y avanza la meta.</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">Se suma al ahorro de este mes y avanza la meta.</div>
       </div>
       <div class="card">
         <h3>⏱️ Tiempo estimado</h3>
@@ -683,7 +696,7 @@ function loadState(){
     const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){ const s=JSON.parse(raw); if(s && s.months) return s; }
   }catch(e){}
-  return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:505115.66,deudaFilter:"pendientes"}, user:{name:"Yosseline"} };
+  return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:505115.66,deudaFilter:"pendientes",saldoAyer:505115.66,saldoHoy:505234.25,rendFecha:"2026-11-20"}, user:{name:"Yosseline"} };
 }
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
@@ -699,21 +712,27 @@ function diasTranscurridos(m){
   if(m.id>actual) return 0;
   return Math.min(dim,ahora.getDate());
 }
-// ---------- FECHA DE AHORRO (2ª quincena) ----------
-// Tu empresa deposita el 14 de cada mes. Si el 14 cae sábado o domingo,
-// el depósito se adelanta al viernes anterior (sábado 13 / domingo 12).
+// ---------- FECHA DE AHORRO (día 29) ----------
+// Tu empresa deposita el 29 de cada mes. Si el 29 cae sábado o domingo,
+// el depósito se adelanta al viernes anterior. En febrero se usa el último
+// día del mes (28) y también se adelanta al viernes anterior si es fin de semana
+// (por ejemplo, febrero 2027 → viernes 26).
 const DIAS_ES=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 const MESES_ES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+function diaDepositoBase(m){
+  const id=(m&&m.id)||monthKey(new Date());
+  return Math.min(29,daysInMonth(id));
+}
 function fechaDeposito(m){
   const id=(m&&m.id)||monthKey(new Date());
   const [y,mo]=id.split("-").map(Number);
-  const d=new Date(y,mo-1,14);
+  const d=new Date(y,mo-1,diaDepositoBase(m));
   const dow=d.getDay();
-  if(dow===6) d.setDate(13);        // sábado -> viernes 13
-  else if(dow===0) d.setDate(12);   // domingo -> viernes 12
+  if(dow===6) d.setDate(d.getDate()-1);        // sábado -> viernes anterior
+  else if(dow===0) d.setDate(d.getDate()-2);   // domingo -> viernes anterior
   return d;
 }
-function depositoMovido(m){ return fechaDeposito(m).getDate()!==14; }
+function depositoMovido(m){ return fechaDeposito(m).getDate()!==diaDepositoBase(m); }
 function depositoLabel(m){
   const d=fechaDeposito(m);
   return DIAS_ES[d.getDay()]+" "+d.getDate()+" de "+MESES_ES[d.getMonth()];
@@ -726,24 +745,78 @@ function depositoCuenta(m){
 }
 function depositoTexto(m){
   const n=depositoCuenta(m), d=depositoLabel(m);
-  const aviso=depositoMovido(m)?" (el 14 cae en fin de semana)":"";
+  const base=diaDepositoBase(m);
+  const aviso=depositoMovido(m)?` (el ${base} cae en fin de semana)`:"";
   if(n>0) return `Tu ahorro se deposita el ${d}${aviso} · faltan ${n} día${n===1?"":"s"}`;
   if(n===0) return `¡Hoy depositan tu ahorro! ${d}${aviso}`;
   return `Tu ahorro se depositó el ${d}${aviso} · hace ${-n} día${-n===1?"":"s"}`;
 }
-// Todo el ahorro se registra en la 2ª quincena. Normaliza los datos viejos
+// Todo el ahorro se registra en el depósito del día 29. Normaliza los datos viejos
 // que tenían parte en q1, sin cambiar el total (por eso el saldo no se mueve).
 function normalizarInv(inv){
   const q1=Number(inv&&inv.q1)||0, q2=Number(inv&&inv.q2)||0;
   return {q1:0,q2:Math.round((q1+q2)*100)/100,rendimiento:Number(inv&&inv.rendimiento)||0};
 }
-function rendMensual(m){
-  if(Array.isArray(m.rendimientoSemanas)&&m.rendimientoSemanas.length)
-    return m.rendimientoSemanas.reduce((s,x)=>s+(Number(x)||0),0);
-  return Number(m.inversion&&m.inversion.rendimiento)||0;
+// ---------- RENDIMIENTO (tasa derivada de saldo ayer/hoy, compuesta al día) ----------
+// El banco genera hoy la diferencia entre el saldo de ayer y el de hoy.
+// Esa diferencia define la tasa diaria; a partir de ahí se proyecta día a día
+// con interés compuesto y se agrupa por semanas y por mes.
+const SALDO_AYER_PREDET=505115.66, SALDO_HOY_PREDET=505234.25;
+function rendSaldos(){
+  const c=state.config||{};
+  const ayer=Number(c.saldoAyer)>0?Number(c.saldoAyer):SALDO_AYER_PREDET;
+  const hoy=Number(c.saldoHoy)>0?Number(c.saldoHoy):SALDO_HOY_PREDET;
+  const fecha=c.rendFecha||todayKey();
+  return {ayer,hoy,fecha};
 }
-function rendDiario(m){ return rendMensual(m)/Math.max(1,daysInMonth(m.id)); }
-function rendAcumulado(m){ return Math.round(rendDiario(m)*diasTranscurridos(m)*100)/100; }
+function rendTasa(){
+  const {ayer,hoy}=rendSaldos();
+  return ayer>0?(hoy/ayer-1):0;
+}
+function rendObsMes(){ return (rendSaldos().fecha||"").slice(0,7); }
+function rendObsDia(){ return parseInt((rendSaldos().fecha||"").split("-")[2],10)||1; }
+// Serie de rendimiento por día del mes. Los meses anteriores al día en que
+// capturamos los saldos conservan su valor histórico (repartido desde semanas).
+function rendSerieDias(m){
+  const dim=daysInMonth(m.id);
+  const arr=Array(dim).fill(0);
+  const obsMes=rendObsMes(), obsDia=rendObsDia();
+  if(m.id<obsMes){
+    const sem=Array.isArray(m.rendimientoSemanas)?m.rendimientoSemanas:[];
+    for(let d=1;d<=dim;d++){
+      const wi=Math.floor((d-1)/7);
+      if(wi>=0 && wi<sem.length) arr[d-1]=Math.round((Number(sem[wi])||0)/(Math.min(7,dim-wi*7))*100)/100;
+    }
+    return arr;
+  }
+  const {ayer,hoy}=rendSaldos(), tasa=rendTasa();
+  const gananciaReal=Math.round((hoy-ayer)*100)/100;
+  let saldo=hoy;
+  if(m.id===obsMes && obsDia>=1 && obsDia<=dim) arr[obsDia-1]=gananciaReal;
+  const desde=(m.id===obsMes)?obsDia+1:1;
+  for(let d=desde;d<=dim;d++){
+    const g=Math.round(saldo*tasa*100)/100;
+    arr[d-1]=g;
+    saldo=Math.round((saldo+g)*100)/100;
+  }
+  return arr;
+}
+function rendSemanasArray(m){
+  const dias=rendSerieDias(m), semanas=[];
+  for(let i=0;i<dias.length;i+=7) semanas.push(Math.round(dias.slice(i,i+7).reduce((s,x)=>s+x,0)*100)/100);
+  return semanas;
+}
+function rendMensual(m){ return Math.round(rendSerieDias(m).reduce((s,x)=>s+x,0)*100)/100; }
+function rendDiario(m){
+  const dias=rendSerieDias(m);
+  const trans=diasTranscurridos(m);
+  if(trans>0 && trans<=dias.length) return dias[trans-1]||0;
+  return dias.find(x=>Math.abs(x)>0.001)||0;
+}
+function rendAcumulado(m){
+  const dias=rendSerieDias(m), hasta=Math.min(diasTranscurridos(m),dias.length);
+  return Math.round(dias.slice(0,hasta).reduce((s,x)=>s+x,0)*100)/100;
+}
 function renderMonthCalendars(){
   ["calInv","calRend"].forEach(cid=>{
     const el=document.getElementById(cid); if(!el) return;
@@ -913,7 +986,7 @@ function renderResumen(){
   renderCompare("cmpGasto", prev? (prevGasto(prev)):null, varTotal, true);
   renderCompare("cmpInv", prev? ((prev.inversion.q1||0)+(prev.inversion.q2||0)):null, inv, false);
   const rr=document.getElementById("resRendHoy"); if(rr){ rr.style.color="var(--ahorro)"; setAnimated(rr,rendAcumulado(currentMonth()),money2); }
-  renderCompare("cmpRend", prev? (prev.inversion.rendimiento||0):null, m.inversion.rendimiento||0, false);
+  renderCompare("cmpRend", prev?rendMensual(prev):null, rendMensual(m), false);
   document.getElementById("metaMini").innerHTML="Saldo: $"+fmt(totalSaved())+" · "+(totalSaved()/META*100).toFixed(2)+"% del millón";
   const rd=document.getElementById("resDeposito");
   if(rd){
@@ -1195,10 +1268,10 @@ function renderInversion(){
   const m=invSelMonth();
   const ml=document.getElementById("invMesLbl"); if(ml) ml.textContent="💰 Aportaciones de "+m.label;
   const mensual=rendMensual(m);
-  const rn=document.getElementById("rendMesNota"); if(rn) rn.textContent="Se reparte entre las "+weeksInMonth(m.id)+" semanas · Total: $"+fmt(mensual)+" · Ganado hasta hoy: $"+fmt(rendAcumulado(m));
+  const rn=document.getElementById("rendMesNota"); if(rn) rn.textContent="Tasa diaria "+(rendTasa()*100).toFixed(6)+"% · Proyección: $"+fmt(mensual)+" · Ganado hasta hoy: $"+fmt(rendAcumulado(m));
   const q1el=document.getElementById("q1"); if(q1el) q1el.value=m.inversion.q1||0;
   document.getElementById("q2").value=m.inversion.q2||0;
-  document.getElementById("rendMes").value=m.inversion.rendimiento||0;
+  document.getElementById("rendMes").value=mensual;
   const dep=document.getElementById("invDeposito"); if(dep) dep.textContent="🗓️ "+depositoTexto(m);
   const total=(m.inversion.q1||0)+(m.inversion.q2||0);
   const min=state.config.minInv||23100;
@@ -1242,16 +1315,42 @@ function drawMetaChart(){
 
 function renderRendim(){
   const m=invSelMonth();
-  const n=weeksInMonth(m.id);
   const dim=daysInMonth(m.id);
-  if(!Array.isArray(m.rendimientoSemanas)) m.rendimientoSemanas=Array(n).fill(0);
-  while(m.rendimientoSemanas.length<n) m.rendimientoSemanas.push(0);
-  if(m.rendimientoSemanas.length>n) m.rendimientoSemanas.length=n;
+  const dias=rendSerieDias(m);
+  const historico=m.id<rendObsMes();
+  const semanas=(historico && Array.isArray(m.rendimientoSemanas) && m.rendimientoSemanas.length)
+    ? m.rendimientoSemanas : rendSemanasArray(m);
+  const n=semanas.length;
+  const total=Math.round(dias.reduce((s,x)=>s+x,0)*100)/100;
+  const {ayer,hoy,fecha}=rendSaldos();
+  const tasa=rendTasa();
+  const setE=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+  const sa=document.getElementById("saldoAyer"); if(sa) sa.value=ayer;
+  const sh=document.getElementById("saldoHoy"); if(sh) sh.value=hoy;
+  const ti=document.getElementById("rendTasaInfo");
+  if(ti) ti.textContent=`Tasa diaria: ${(tasa*100).toFixed(6)}% · ganancia de ayer a hoy: $${fmt(hoy-ayer)} · desde ${fecha} · interés compuesto`;
+
+  // detalle día a día
+  const lista=document.getElementById("rendDiarioList");
+  if(lista){
+    lista.innerHTML="";
+    dias.forEach((v,i)=>{
+      const d=i+1;
+      const esReal=(m.id===rendObsMes() && d===rendObsDia());
+      const esEstimado=(historico?false:(m.id>rendObsMes()||d>rendObsDia()));
+      const sinDato=(!historico && m.id===rendObsMes() && d<rendObsDia());
+      const etiqueta=esReal?"<span style='color:var(--ahorro);font-size:11px'>real</span>":esEstimado?"<span style='color:var(--muted);font-size:11px'>estimado</span>":sinDato?"<span style='color:var(--muted);font-size:11px'>—</span>":"";
+      const row=document.createElement("div");
+      row.className="row";
+      row.innerHTML=`<span>${d} de ${monthLabel(m.id).split(" ")[0]} ${etiqueta}</span><span style="font-weight:700;color:${esReal?"var(--ahorro)":"inherit"}">${sinDato?"—":"$"+fmtI(v)}</span>`;
+      lista.appendChild(row);
+    });
+  }
+
+  // resumen semanal
   const grid=document.getElementById("weekGrid");
   grid.innerHTML="";
-  let total=0;
-  m.rendimientoSemanas.forEach((v,i)=>{
-    total+=Number(v)||0;
+  semanas.forEach((v,i)=>{
     const desde=i*7+1, hasta=Math.min(dim,(i+1)*7);
     const div=document.createElement("div");
     div.className="week-cell";
@@ -1259,17 +1358,22 @@ function renderRendim(){
     grid.appendChild(div);
   });
   document.getElementById("rendTotals").innerHTML=`Total del mes: $${fmt(total)} · ${n} semanas · Promedio semanal: $${fmt(n?total/n:0)}`;
-  // acumulación diaria en tiempo real
-  const trans=diasTranscurridos(m), diario=rendDiario(m), acum=rendAcumulado(m);
-  const setE=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+
+  // acumulación real hasta hoy
+  const trans=diasTranscurridos(m);
+  const delMes=currentMonth()&&currentMonth().id;
+  const acum=(m.id===delMes)?rendAcumulado(m):(m.id<delMes?rendMensual(m):0);
+  const diario=rendDiario(m);
   setE("rendHoy","$"+fmt(acum));
   setE("rendDiario","$"+fmt(diario));
   const barra=document.getElementById("rendProgBar"); if(barra) barra.style.width=Math.min(100,total?acum/total*100:0)+"%";
   const prog=document.getElementById("rendProgreso");
-  if(prog) prog.textContent=`Días: ${trans} de ${dim} · Mensual: $${fmt(total)} · Depósito: ${depositoLabel(m)} · ${m.id===(currentMonth()&&currentMonth().id)?"Sigue acumulándose cada día":"Mes completo"}`;
+  if(prog) prog.textContent=`Días: ${trans} de ${dim} · Proyección del mes: $${fmt(total)} · Depósito: ${depositoLabel(m)} · ${m.id===delMes?"Sigue acumulándose cada día":"Mes completo"}`;
   const rw=document.getElementById("rendWeeks");
+  const rc=document.getElementById("rendWeeksCard");
+  if(rc) rc.style.display=historico?"block":"none";
   rw.innerHTML="";
-  m.rendimientoSemanas.forEach((v,i)=>{
+  if(historico) semanas.forEach((v,i)=>{
     const desde=i*7+1, hasta=Math.min(dim,(i+1)*7);
     const row=document.createElement("div");
     row.className="row";
@@ -1408,8 +1512,8 @@ function buildResumenTexto(m){
   const varT=gastoVariableTotal(m);
   const inv=(m.inversion.q1||0)+(m.inversion.q2||0);
   let t=`FINANZAS ${m.label}\n`;
-  t+=`Pagar BBVA: $${fmt(bbva)}\nFijos: $${fmt(fijos)}\nGasto variable: $${fmt(varT)}\nInvertido: $${fmt(inv)}\nRendimiento: $${fmt(m.inversion.rendimiento||0)}\n`;
-  t+=`Ahorro (2ª quincena): ${depositoLabel(m)}${depositoMovido(m)?" (14 en fin de semana)":""}\n`;
+  t+=`Pagar BBVA: $${fmt(bbva)}\nFijos: $${fmt(fijos)}\nGasto variable: $${fmt(varT)}\nInvertido: $${fmt(inv)}\nRendimiento: $${fmt(rendMensual(m))}\n`;
+  t+=`Depósito de ahorro (día 29): ${depositoLabel(m)}${depositoMovido(m)?` (el ${diaDepositoBase(m)} cae en fin de semana)`:""}\n`;
   t+=`Saldo ahorrado: $${fmt(totalSaved())} (${(totalSaved()/META*100).toFixed(2)}%)\n`;
   t+=`\nMSI:\n`;
   m.msi.forEach(x=>t+=`- ${x.tarjeta} ${x.desc}: $${fmt(x.monto)} (${fmtI(x.pago)}/${fmtI(x.total)})\n`);
@@ -1626,7 +1730,7 @@ function saveMama(){
 function setInv(field,v){
   const m=invSelMonth();
   m.inversion[field]=parseFloat(v)||0;
-  m.inversion.q1=0; // todo el ahorro vive en la 2ª quincena
+  m.inversion.q1=0; // todo el ahorro vive en el depósito del día 29
   saveState(); renderAll();
 }
 function setRendMes(v){
@@ -1639,6 +1743,31 @@ function setRendMes(v){
   m.rendimientoSemanas=arr;
   m.inversion.rendimiento=total;
   saveState(); renderAll();
+}
+// El saldo total de la app debe cuadrar con el saldo real que capturas.
+function recalibrarSaldoTotal(objetivo){
+  if(!state.config) state.config={};
+  const actual=totalSaved();
+  state.config.savedBase=Math.round(((Number(state.config.savedBase)||0)+(Number(objetivo)-actual))*100)/100;
+}
+function setRendSaldos(){
+  const a=parseFloat(document.getElementById("saldoAyer")?.value);
+  const h=parseFloat(document.getElementById("saldoHoy")?.value);
+  if(!(a>0)||!(h>0)){ toast("Captura ambos saldos","warn"); renderRendim(); return; }
+  if(!state.config) state.config={};
+  state.config.saldoAyer=a;
+  state.config.saldoHoy=h;
+  state.config.rendFecha=todayKey();
+  recalibrarSaldoTotal(h);
+  saveState(); renderAll(); toast("Tasa actualizada","ok");
+}
+function usarHoyComoAyer(){
+  const h=parseFloat(document.getElementById("saldoHoy")?.value);
+  if(!(h>0)){ toast("Captura el saldo de hoy","warn"); return; }
+  document.getElementById("saldoAyer").value=h;
+  document.getElementById("saldoHoy").value="";
+  document.getElementById("saldoHoy").focus();
+  toast("Ahora captura el nuevo saldo de hoy","ok");
 }
 function saveSemanas(){
   const m=invSelMonth();
@@ -1754,13 +1883,9 @@ function createNewMonth(){
   nm.apoyo=last.apoyo;
   nm.gasto={mama:{budget:last.gasto.mama.budget,spent:0,items:[]},yo:{budget:last.gasto.yo.budget,spent:0,items:[]}};
   nm.inversion={q1:0,q2:0,rendimiento:0};
-  // semanas del mes nuevo con el promedio semanal del mes anterior
-  const nSem=weeksInMonth(nm.id);
-  const promed=last && Array.isArray(last.rendimientoSemanas) && last.rendimientoSemanas.length
-    ? last.rendimientoSemanas.reduce((s,v)=>s+(Number(v)||0),0)/last.rendimientoSemanas.length
-    : 0;
-  nm.rendimientoSemanas=Array(nSem).fill(Math.round(promed*100)/100);
-  nm.inversion.rendimiento=Math.round(promed*nSem*100)/100;
+  // proyección del mes nuevo con la tasa diaria derivada de los saldos
+  nm.rendimientoSemanas=rendSemanasArray(nm);
+  nm.inversion.rendimiento=rendMensual(nm);
   state.months.push(nm);
   state.current=k;
   saveState(); renderAll(); toast("Mes nuevo creado, MSI avanzados");
@@ -1842,7 +1967,7 @@ function pdfMensual(){
   line("Fijos (MSI+deuda+apoyo): $"+fmt(fijosTotal(m)));
   line("Gasto variable: $"+fmt(gastoTotal(m,"mama")+gastoTotal(m,"yo")));
   line("Invertido: $"+fmt((m.inversion.q1||0)+(m.inversion.q2||0)));
-  line("Rendimiento: $"+fmt(m.inversion.rendimiento||0));
+  line("Rendimiento (proyección): $"+fmt(rendMensual(m)));
   line("Saldo ahorrado: $"+fmt(totalSaved())+" ("+(totalSaved()/META*100).toFixed(2)+"%)",{gap:8});
   line("Pagos por tarjeta",{section:true,gap:6});
   ["BBVA","Mifel","MercadoPago"].forEach(t=>{
@@ -1860,9 +1985,10 @@ function pdfMensual(){
   m.deudaMama.forEach(x=>line("  - "+x.desc+": $"+fmt(x.monto)+" ("+x.pago+"/"+x.total+")"));
   line("Apoyo: $"+fmt(m.apoyo));
   line("Inversión",{section:true,gap:6});
-  line("Depósito de ahorro (2ª quincena): "+depositoLabel(m)+(depositoMovido(m)?" (14 en fin de semana)":""));
-  line("Ahorro (2ª quincena): $"+fmt(m.inversion.q2||0));
-  line("Rendimiento mes: $"+fmt(m.inversion.rendimiento||0));
+  line("Depósito de ahorro (día 29): "+depositoLabel(m)+(depositoMovido(m)?` (el ${diaDepositoBase(m)} cae en fin de semana)`:""));
+  line("Ahorro del mes: $"+fmt(m.inversion.q2||0));
+  line("Rendimiento mes (proyección): $"+fmt(rendMensual(m)));
+  line("Ganado hasta hoy: $"+fmt(rendAcumulado(m)));
   // comparacion
   const prev=prevMonthId(m.id)?state.months.find(x=>x.id===prevMonthId(m.id)):null;
   if(prev){
@@ -1870,7 +1996,7 @@ function pdfMensual(){
     const pg=prevGasto(prev); const cg=gastoTotal(m,"mama")+gastoTotal(m,"yo");
     line("Gasto: $"+fmt(pg)+" -> $"+fmt(cg));
     line("Inversión: $"+fmt((prev.inversion.q1||0)+(prev.inversion.q2||0))+" -> $"+fmt((m.inversion.q1||0)+(m.inversion.q2||0)));
-    line("Rendimiento: $"+fmt(prev.inversion.rendimiento||0)+" -> $"+fmt(m.inversion.rendimiento||0));
+    line("Rendimiento: $"+fmt(rendMensual(prev))+" -> $"+fmt(rendMensual(m)));
   }
   line("Historial MSI",{section:true,gap:6});
   m.msi.forEach(x=>line(x.tarjeta+" "+x.desc+" $"+fmt(x.monto)+" "+fmtI(x.pago)+"/"+fmtI(x.total)));
@@ -1974,7 +2100,7 @@ async function syncToBot(silent){
     if(Array.isArray(m.deudaMama)&&m.deudaMama.length) payload.mamaAccount=m.deudaMama;
     if((Number(m.apoyo)||0)>0) payload.apoyo=m.apoyo;
     if(Array.isArray(m.msi)&&m.msi.length) payload.msi=m.msi;
-    if(m.inversion && ((Number(m.inversion.q1)||0)+(Number(m.inversion.q2)||0)+(Number(m.inversion.rendimiento)||0))>0) payload.inversion=normalizarInv(m.inversion);
+    if(m.inversion && ((Number(m.inversion.q1)||0)+(Number(m.inversion.q2)||0)+rendMensual(m))>0) payload.inversion=normalizarInv({...m.inversion,rendimiento:rendMensual(m)});
     if(Array.isArray(m.rendimientoSemanas)&&m.rendimientoSemanas.length) payload.rendSemanas=m.rendimientoSemanas;
     const r=await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify(payload)});
     if(!r.ok) throw new Error("HTTP "+r.status);
@@ -2364,12 +2490,8 @@ function init(){
     if(ult && ult.inversion){
       nm.inversion=normalizarInv(ult.inversion);
     }
-    if(ult && Array.isArray(ult.rendimientoSemanas) && ult.rendimientoSemanas.length){
-      const nSem=weeksInMonth(realK);
-      const promed=ult.rendimientoSemanas.reduce((s,v)=>s+(Number(v)||0),0)/ult.rendimientoSemanas.length;
-      nm.rendimientoSemanas=Array(nSem).fill(Math.round(promed*100)/100);
-      nm.inversion.rendimiento=Math.round(promed*nSem*100)/100;
-    }
+    nm.rendimientoSemanas=rendSemanasArray(nm);
+    nm.inversion.rendimiento=rendMensual(nm);
     state.months.push(nm);
     state.current=realK;
   }
@@ -2379,7 +2501,7 @@ function init(){
     state.config.botUrl=savedCfg.botUrl;
     state.config.botToken=savedCfg.botToken||"";
   }
-  // migración única: todo el ahorro histórico pasa a la 2ª quincena.
+  // migración única: todo el ahorro histórico pasa al depósito del día 29.
   // q1+q2 no cambia, así que el saldo sigue siendo exactamente el mismo.
   if(!state.config) state.config={};
   if(!state.config.q1Aq2){
@@ -2439,6 +2561,16 @@ function init(){
     });
     state.config.rendSemanasMigrado=true;
   }
+  // migración única: rendimiento compuesto a partir del saldo real de ayer/hoy.
+  // El saldo de la app se recalibra para quedar exactamente en el saldo de hoy.
+  if(!state.config.rendCompuestoMigrado){
+    if(!(Number(state.config.saldoAyer)>0)) state.config.saldoAyer=SALDO_AYER_PREDET;
+    if(!(Number(state.config.saldoHoy)>0)) state.config.saldoHoy=SALDO_HOY_PREDET;
+    if(!state.config.rendFecha) state.config.rendFecha="2026-11-20";
+    state.months.forEach(m=>{ if(m.inversion) m.inversion.rendimiento=rendMensual(m); });
+    recalibrarSaldoTotal(state.config.saldoHoy);
+    state.config.rendCompuestoMigrado=true;
+  }
   saveState();
   renderAll();
   checkNotifications();
@@ -2456,7 +2588,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=21").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=22").catch(()=>{}); }
 </script>
 </body>
 </html>

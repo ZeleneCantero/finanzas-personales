@@ -14,6 +14,12 @@ Resumen, Deudas, Gastos, Inversión, Rendim., Meta, Más.
 ## Automatización
 El día 12 de cada mes (al abrir la app) se crea el mes nuevo y los MSI avanzan un pago automáticamente. Los liquidados se marcan "Liquidado" y no se borran. No hay botón manual de "+1 pago".
 
+## Depósito de ahorro
+El ahorro se deposita el día **29** de cada mes. Si el 29 cae sábado o domingo, se adelanta al **viernes anterior**. En febrero se usa el último día del mes (28) y también se adelanta al viernes anterior si cae fin de semana (por ejemplo, febrero 2027 → viernes 26).
+
+## Rendimiento
+En **Rendim.** se capturan el saldo de ayer y el de hoy. La diferencia entre ambos define la tasa diaria que da el banco; a partir de ahí la app calcula el rendimiento **día a día con interés compuesto**, lo agrupa por semana y muestra la proyección total del mes. El saldo total de la app se recalibra automáticamente para cuadrar con el saldo de hoy capturado.
+
 ## PDFs
 - "Más → PDF mensual" genera el PDF del mes.
 - Deudas → "PDF para mamá".
