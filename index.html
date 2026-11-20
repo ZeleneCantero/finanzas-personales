@@ -431,6 +431,11 @@
         <div style="font-size:11px;color:var(--muted);margin-top:5px" id="rendProgreso"></div>
       </div>
       <div class="card">
+        <h3>📆 Rendimiento anual</h3>
+        <div class="stat"><div class="v" id="rendAnual" style="font-size:24px">0.00%</div><div class="l">Estimado a 365 días</div></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Con la tasa actual e interés compuesto. Es una proyección, no una garantía.</div>
+      </div>
+      <div class="card">
         <h3>⚙️ Saldos para calcular la tasa</h3>
         <div class="grid2">
           <input id="saldoAyer" type="number" inputmode="decimal" step="0.01" placeholder="Saldo de ayer" onchange="setRendSaldos()">
@@ -1373,6 +1378,7 @@ function renderRendim(){
   const diario=rendDiario(m);
   setE("rendHoy","$"+fmt(acum));
   setE("rendDiario","$"+fmt(diario));
+  setE("rendAnual",((Math.pow(1+rendTasa(),365)-1)*100).toFixed(2)+"%");
   const barra=document.getElementById("rendProgBar"); if(barra) barra.style.width=Math.min(100,total?acum/total*100:0)+"%";
   const prog=document.getElementById("rendProgreso");
   if(prog) prog.textContent=`Días: ${trans} de ${dim} · Proyección del mes: $${fmt(total)} · Depósito: ${depositoLabel(m)} · ${m.id===delMes?"Sigue acumulándose cada día":"Mes completo"}`;
