@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="./vendor/chart.umd.min.js"></script>
+<script src="./vendor/jspdf.umd.min.js"></script>
 <style>
   :root{
     --pink:#ec4899; --pink-light:#fce7f3; --pink-dark:#be185d;
@@ -1924,7 +1924,7 @@ function exportCSV(){
   ["mama","yo"].forEach(who=>{
     (m.gasto[who].items||[]).forEach(x=>rows.push([m.id,who,x.fecha,x.cat||"Otro",x.desc,x.monto]));
   });
-  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\\n");
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
   const blob=new Blob([csv],{type:"text/csv"});
   const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="gastos-"+m.id+".csv"; a.click(); URL.revokeObjectURL(url); toast("CSV descargado");
 }
@@ -2581,7 +2581,20 @@ function renderPushStatus(){
     : 'Aún no activados. Toca "Activar notificaciones" una sola vez.';
   el.style.color=activo?"var(--green)":"var(--muted)";
 }
-function checkNotifications(){
+// Guard compartido con el bot: el primero que avisa reclama el día.
+// Si no hay conexión, se usa solo el guard local para no perder el aviso.
+async function avisoBot(action,hoy){
+  const cfg=state.config||{};
+  const url=(cfg.botUrl||"").trim().replace(/\/+$/,"");
+  const token=(cfg.botToken||"").trim();
+  if(!url||!token) return {ok:true,claimed:true};
+  try{
+    const r=await fetch(url+"/api/aviso",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({action,dia:hoy})});
+    if(!r.ok) return {ok:false,claimed:true};
+    return Object.assign({ok:true,claimed:true},await r.json().catch(()=>({})));
+  }catch(e){ return {ok:false,claimed:true}; }
+}
+async function checkNotifications(){
   const now=new Date();
   if(!state.config) state.config={};
   // día 13: mes nuevo y MSI avanzados
@@ -2591,13 +2604,17 @@ function checkNotifications(){
       saveState();
     }
   }
-  // aviso diario de rendimiento (una vez al día)
+  // aviso diario de rendimiento: uno solo entre app, push y Telegram
   const hoy=todayKey();
-  if(state.config.lastRendNotif!==hoy && Math.abs(rendNotificacionHoy())>0.001){
-    if(notifyRendimiento()){
-      state.config.lastRendNotif=hoy;
-      saveState();
-    }
+  if(state.config.lastRendNotif===hoy || Math.abs(rendNotificacionHoy())<=0.001) return;
+  if(!state.config.notificationsEnabled || typeof Notification==="undefined" || Notification.permission!=="granted") return;
+  const reclamo=await avisoBot("claim",hoy);
+  if(reclamo.claimed===false) return;
+  if(notifyRendimiento()){
+    state.config.lastRendNotif=hoy;
+    saveState();
+  } else {
+    await avisoBot("release",hoy);
   }
 }
 
@@ -2755,7 +2772,7 @@ function init(){
   setInterval(()=>{ if(document.visibilityState==="visible") checkNotifications(); },60000);
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=25").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=26").catch(()=>{}); }
 </script>
 </body>
 </html>

@@ -1,5 +1,10 @@
-const CACHE = "finanzas-v25";
-const ASSETS = ["./manifest.json", "./icon.svg"];
+const CACHE = "finanzas-v26";
+const ASSETS = [
+  "./manifest.json",
+  "./icon.svg",
+  "./vendor/chart.umd.min.js",
+  "./vendor/jspdf.umd.min.js",
+];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {}));
