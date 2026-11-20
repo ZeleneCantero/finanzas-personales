@@ -117,7 +117,7 @@
   .month-chip{background:var(--pink-light);border-radius:8px;padding:6px 4px;text-align:center;font-size:12px;cursor:pointer;border:2px solid transparent}
   .month-chip.active{background:var(--pink);color:#fff;font-weight:700}
   .month-chip.today{box-shadow:inset 0 0 0 2px var(--purple)}
-  .month-chip.today::after{content:"hoy";display:block;font-size:9px;font-weight:800;color:var(--purple);line-height:1.1}
+  .month-chip.today::after{content:"Hoy";display:block;font-size:9px;font-weight:800;color:var(--purple);line-height:1.1}
   .month-chip.active.today::after{color:#fff}
   .month-chip small{display:block;font-size:10px;opacity:.85}
   .collapse-head{cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center}
@@ -186,7 +186,7 @@
 <body>
 <div class="app">
   <header>
-    <div class="title">🪼 Finanzas <span style="font-size:12px;opacity:.8">· primer millón 🐳</span></div>
+    <div class="title">🪼 Finanzas <span style="font-size:12px;opacity:.8">· Primer millón 🐳</span></div>
     <div class="sub" id="headerSub">Cargando...</div>
     <div class="progress-wrap">
       <div class="progress-bar">
@@ -251,7 +251,7 @@
       <div class="card">
         <h3>⚡ Captura rápida</h3>
         <div class="grid2" style="margin-bottom:8px">
-          <input id="quickInput" placeholder="ej: agregar a mamá 1000 Temu">
+          <input id="quickInput" placeholder="Ej: agregar a mamá 1000 Temu">
           <button class="btn" onclick="quickAdd()">Agregar</button>
         </div>
         <div class="chatbox" id="chatbox"></div>
@@ -401,7 +401,7 @@
         <h3 id="invMesLbl">💰 Aportaciones de este mes</h3>
         <div class="grid2">
           <div>
-            <label style="font-size:11px;color:var(--muted)" title="Tu empresa deposita el día 29 de cada mes (viernes anterior si cae en fin de semana)">Día 29 · tu ahorro</label>
+            <label style="font-size:11px;color:var(--muted)" title="Tu empresa deposita el día 29 de cada mes (viernes anterior si cae en fin de semana)">Día 29 · Tu ahorro</label>
             <input type="number" id="q2" onchange="setInv('q2',this.value)">
           </div>
         </div>
@@ -482,7 +482,7 @@
       <div class="card">
         <h3>➕ Abonar al ahorro</h3>
         <div class="grid2">
-          <input id="abonoInput" type="number" inputmode="decimal" placeholder="monto (ej: 5000)">
+          <input id="abonoInput" type="number" inputmode="decimal" placeholder="Monto (ej: 5000)">
           <button class="btn" onclick="addAbono()">Abonar</button>
         </div>
         <div style="font-size:12px;color:var(--muted);margin-top:6px">Se suma al ahorro de este mes y avanza la meta.</div>
@@ -600,6 +600,7 @@ function setAnimated(el,value,fmtFn){
 }
 function monthKey(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
 function monthLabel(k){ const [y,m]=k.split("-"); const names=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]; return names[+m-1]+" "+y; }
+function cap(s){ const v=String(s||""); return v?v.charAt(0).toUpperCase()+v.slice(1):v; }
 function todayKey(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 
 function defaultMonth(k){
@@ -747,7 +748,7 @@ function fechaDeposito(m){
 function depositoMovido(m){ return fechaDeposito(m).getDate()!==diaDepositoBase(m); }
 function depositoLabel(m){
   const d=fechaDeposito(m);
-  return DIAS_ES[d.getDay()]+" "+d.getDate()+" de "+MESES_ES[d.getMonth()];
+  return cap(DIAS_ES[d.getDay()])+" "+d.getDate()+" de "+cap(MESES_ES[d.getMonth()]);
 }
 // >0 faltan días, 0 es hoy, <0 ya pasó
 function depositoCuenta(m){
@@ -759,9 +760,9 @@ function depositoTexto(m){
   const n=depositoCuenta(m), d=depositoLabel(m);
   const base=diaDepositoBase(m);
   const aviso=depositoMovido(m)?` (el ${base} cae en fin de semana)`:"";
-  if(n>0) return `Tu ahorro se deposita el ${d}${aviso} · faltan ${n} día${n===1?"":"s"}`;
+  if(n>0) return `Tu ahorro se deposita el ${d}${aviso} · Faltan ${n} día${n===1?"":"s"}`;
   if(n===0) return `¡Hoy depositan tu ahorro! ${d}${aviso}`;
-  return `Tu ahorro se depositó el ${d}${aviso} · hace ${-n} día${-n===1?"":"s"}`;
+  return `Tu ahorro se depositó el ${d}${aviso} · Hace ${-n} día${-n===1?"":"s"}`;
 }
 // Todo el ahorro se registra en el depósito del día 29. Normaliza los datos viejos
 // que tenían parte en q1, sin cambiar el total (por eso el saldo no se mueve).
@@ -839,7 +840,7 @@ function renderMonthCalendars(){
       const aport=(m.inversion.q1||0)+(m.inversion.q2||0);
       const b=document.createElement("div");
       b.className="month-chip"+(m.id===sel?" active":"")+(m.id===hoy?" today":"");
-      b.title=m.label+" · aportación $"+fmt(aport);
+      b.title=m.label+" · Aportación $"+fmt(aport);
       b.innerHTML=`${m.label.split(" ")[0].slice(0,3)}<small>$${fmtI(aport)}</small>`;
       b.onclick=()=>selectInvMonth(m.id);
       el.appendChild(b);
@@ -1012,7 +1013,7 @@ function prevGasto(pm){ return gastoVariableTotal(pm); }
 
 function renderCompare(id, prev, cur, higherIsBad){
   const el=document.getElementById(id);
-  if(prev==null){ el.innerHTML="<span style='color:var(--muted)'>sin datos</span>"; return; }
+  if(prev==null){ el.innerHTML="<span style='color:var(--muted)'>Sin datos</span>"; return; }
   const diff=cur-prev;
   const arrow = diff>0?"▲":diff<0?"▼":"•";
   let cls = higherIsBad ? (diff>0?"arrow-down":"arrow-up") : (diff>0?"arrow-up":"arrow-down");
@@ -1267,11 +1268,11 @@ function renderGastos(){
   if(gs){
     const tgCount=tgDeudas().length;
     if(tgCount){
-      gs.textContent=`🔄 ${tgCount} movimiento(s) vienen de Telegram · se actualizan solos`;
+      gs.textContent=`🔄 ${tgCount} movimiento(s) vienen de Telegram · Se actualizan solos`;
     } else if(state.config && state.config.botUrl && state.config.botToken){
-      gs.textContent="🔄 Conectado a Telegram · sin movimientos pendientes importados";
+      gs.textContent="🔄 Conectado a Telegram · Sin movimientos pendientes importados";
     } else {
-      gs.textContent="⚠️ Telegram no conectado · configura en Más → Sincronización";
+      gs.textContent="⚠️ Telegram no conectado · Configura en Más → Sincronización";
     }
   }
 }
@@ -1340,7 +1341,7 @@ function renderRendim(){
   const sa=document.getElementById("saldoAyer"); if(sa) sa.value=ayer;
   const sh=document.getElementById("saldoHoy"); if(sh) sh.value=hoy;
   const ti=document.getElementById("rendTasaInfo");
-  if(ti) ti.textContent=`Tasa diaria: ${(tasa*100).toFixed(6)}% · ganancia de ayer a hoy: $${fmt(hoy-ayer)} · desde ${fecha} · interés compuesto`;
+  if(ti) ti.textContent=`Tasa diaria: ${(tasa*100).toFixed(6)}% · Ganancia de ayer a hoy: $${fmt(hoy-ayer)} · Desde ${fecha} · Interés compuesto`;
 
   // detalle día a día
   const lista=document.getElementById("rendDiarioList");
@@ -1351,7 +1352,7 @@ function renderRendim(){
       const esReal=(m.id===rendObsMes() && d===rendObsDia());
       const esEstimado=(historico?false:(m.id>rendObsMes()||d>rendObsDia()));
       const sinDato=(!historico && m.id===rendObsMes() && d<rendObsDia());
-      const etiqueta=esReal?"<span style='color:var(--ahorro);font-size:11px'>real</span>":esEstimado?"<span style='color:var(--muted);font-size:11px'>estimado</span>":sinDato?"<span style='color:var(--muted);font-size:11px'>—</span>":"";
+      const etiqueta=esReal?"<span style='color:var(--ahorro);font-size:11px'>Real</span>":esEstimado?"<span style='color:var(--muted);font-size:11px'>Estimado</span>":sinDato?"<span style='color:var(--muted);font-size:11px'>—</span>":"";
       const row=document.createElement("div");
       row.className="row";
       row.innerHTML=`<span>${d} de ${monthLabel(m.id).split(" ")[0]} ${etiqueta}</span><span style="font-weight:700;color:${esReal?"var(--ahorro)":"inherit"}">${sinDato?"—":"$"+fmtI(v)}</span>`;
@@ -1433,7 +1434,7 @@ function renderMeta(){
     const d=new Date(now.getFullYear(), now.getMonth(), 1);
     d.setMonth(d.getMonth()+monthsNeeded);
     const meses=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-    const fechaStr=meses[d.getMonth()]+" de "+d.getFullYear();
+    const fechaStr=cap(meses[d.getMonth()])+" de "+d.getFullYear();
     document.getElementById("metaTiempo").innerHTML=`Ritmo promedio últimos ${last3.length} meses: $${fmt(avg)}/mes<br>Tiempo estimado: <b>${monthsNeeded} meses</b> (${(monthsNeeded/12).toFixed(1)} años)<br>🗓️ Llegarás al millón en: <b>${fechaStr}</b>`;
   } else {
     document.getElementById("metaTiempo").innerHTML="Sin datos suficientes para estimar.";
@@ -2004,7 +2005,7 @@ function pdfMensual(){
   // comparacion
   const prev=prevMonthId(m.id)?state.months.find(x=>x.id===prevMonthId(m.id)):null;
   if(prev){
-    line("vs mes anterior",{section:true,gap:6});
+    line("Vs mes anterior",{section:true,gap:6});
     const pg=prevGasto(prev); const cg=gastoTotal(m,"mama")+gastoTotal(m,"yo");
     line("Gasto: $"+fmt(pg)+" -> $"+fmt(cg));
     line("Inversión: $"+fmt((prev.inversion.q1||0)+(prev.inversion.q2||0))+" -> $"+fmt((m.inversion.q1||0)+(m.inversion.q2||0)));
@@ -2129,7 +2130,7 @@ function applySetupLink(){
     try{ s=new URL(raw,location.href).searchParams.get("setup"); }catch(e){}
     if(!s) s=raw; // por si pegó solo la parte en base64
     const cfg=JSON.parse(atob(s));
-    if(!cfg.botUrl) throw new Error("sin URL");
+    if(!cfg.botUrl) throw new Error("Sin URL");
     state.config=state.config||{};
     state.config.botUrl=cfg.botUrl;
     state.config.botToken=cfg.botToken||"";
@@ -2368,7 +2369,7 @@ async function importFromBot(silent){
       if(gres.added) parts.push(`${gres.added} gasto(s) personal(es)`);
       if(gres.updated) parts.push(`${gres.updated} gasto(s) actualizado(s)`);
       if(gres.removed) parts.push(`${gres.removed} gasto(s) borrado(s)`);
-      if(cfgChanges) parts.push("datos compartidos actualizados");
+      if(cfgChanges) parts.push("Datos compartidos actualizados");
       toast(parts.length?`Telegram: ${parts.join(", ")}`:"Sin cambios de Telegram","ok");
     }
   }catch(e){
@@ -2391,14 +2392,14 @@ function renderSyncStatus(){
   const url=(state.config?.botUrl||"").trim();
   const token=(state.config?.botToken||"").trim();
   if(!url||!token){
-    el.textContent="⚠️ Telegram no conectado · configura en Más → Sincronización";
+    el.textContent="⚠️ Telegram no conectado · Configura en Más → Sincronización";
     el.className="sync-status warn";
     return;
   }
   const last=state.config.lastSync||0;
   const err=state.config.lastSyncError||0;
   if(err && err>last){
-    el.innerHTML='<span>⚠️ Sin conexión con Telegram · mostrando últimos datos guardados</span><button type="button" class="sync-retry" onclick="retrySync()">🔄 Reintentar</button>';
+    el.innerHTML='<span>⚠️ Sin conexión con Telegram · Mostrando últimos datos guardados</span><button type="button" class="sync-retry" onclick="retrySync()">🔄 Reintentar</button>';
     el.className="sync-status warn";
     return;
   }
