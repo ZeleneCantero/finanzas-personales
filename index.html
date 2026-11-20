@@ -2557,9 +2557,10 @@ function rendNotificacionHoy(){
   const dias=rendSerieDias(currentMonth());
   return Math.round((dias[new Date().getDate()-1]||0)*100)/100;
 }
+function rendAnualPct(){ return (Math.pow(1+rendTasa(),365)-1)*100; }
 function notifyRendimiento(){
   const monto=rendNotificacionHoy();
-  return notify("💰 Rendimiento de hoy",`Hoy generaste $${fmt(monto)}. Tasa diaria ${(rendTasa()*100).toFixed(6)}% · Saldo $${fmt(rendSaldos().hoy)}.`);
+  return notify("💰 Rendimiento de hoy",`Hoy generaste $${fmt(monto)}. Tasa diaria ${(rendTasa()*100).toFixed(6)}% · Saldo $${fmt(rendSaldos().hoy)}. Anual estimado: ${rendAnualPct().toFixed(2)}%.`);
 }
 function testRendNotification(){
   if(!state.config || !state.config.notificationsEnabled){ toast("Activa las notificaciones primero","warn"); return; }
