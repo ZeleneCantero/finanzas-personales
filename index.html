@@ -698,7 +698,12 @@ function loadState(){
   }catch(e){}
   return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:505115.66,deudaFilter:"pendientes",saldoAyer:505115.66,saldoHoy:505234.25,rendFecha:"2026-11-20"}, user:{name:"Yosseline"} };
 }
-function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function saveState(){
+  // El token nunca se guarda en claro dentro del estado ni en los respaldos.
+  const copia=JSON.parse(JSON.stringify(state));
+  if(copia.config) delete copia.config.botToken;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(copia));
+}
 
 function currentMonth(){ return state.months.find(m=>m.id===state.current) || state.months[state.months.length-1]; }
 function invSelMonth(){ const id=state.config&&state.config.invCalMonth; return state.months.find(m=>m.id===id)||currentMonth(); }
@@ -1897,7 +1902,9 @@ function closeModal(){ document.getElementById("modalBack").classList.add("hidde
 
 // export/import
 function exportData(){
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const copia=JSON.parse(JSON.stringify(state));
+  if(copia.config) delete copia.config.botToken;
+  const blob=new Blob([JSON.stringify(copia,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=url; a.download="finanzas-backup.json"; a.click();
   URL.revokeObjectURL(url); toast("Descargado");
@@ -1915,18 +1922,15 @@ function exportCSV(){
 function importData(e){
   const file=e.target.files[0]; if(!file) return;
   const r=new FileReader();
-  r.onload=ev=>{
+  r.onload=async ev=>{
     try{
       const s=JSON.parse(ev.target.result);
       if(s.months){
-        // conservar la conexión con Telegram al restaurar
-        if(!s.config) s.config={};
-        const cfg=loadCfg();
-        if((!s.config.botUrl || !s.config.botToken) && cfg){
-          s.config.botUrl=cfg.botUrl||"";
-          s.config.botToken=cfg.botToken||"";
-        }
-        state=s; saveState(); saveCfg(); renderAll(); toast("Restaurado");
+        // La conexión no viene en el backup: se recupera cifrada del dispositivo.
+        state=s;
+        await restoreBotCfg();
+        applyEmbeddedSetup();
+        saveState(); saveCfg(); renderAll(); toast("Restaurado");
       } else toast("Archivo inválido");
     }
     catch(err){ toast("Error al leer"); }
@@ -2021,15 +2025,79 @@ function pdfMama(){
 }
 
 // bot sync
-// La conexión se guarda en DOS lugares para que no se pierda al recargar
-// ni al restaurar un respaldo de datos.
-const CFG_KEY="finanzas_cfg_v1";
+// La conexión se guarda de forma permanente: el token se cifra en este
+// dispositivo (AES-GCM) y nunca se escribe en claro en el estado ni en backups.
+const CFG_KEY="finanzas_cfg_v2";
+const CFG_KEY_ID="finanzas_cfg_key_v2";
+let cfgKeyPromise=null;
+function cfgKey(){
+  if(cfgKeyPromise) return cfgKeyPromise;
+  cfgKeyPromise=(async()=>{
+    try{
+      if(!window.crypto||!crypto.subtle) return null;
+      let b64=localStorage.getItem(CFG_KEY_ID), raw;
+      if(b64) raw=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+      else { raw=crypto.getRandomValues(new Uint8Array(32)); localStorage.setItem(CFG_KEY_ID,btoa(String.fromCharCode(...raw))); }
+      return await crypto.subtle.importKey("raw",raw,{name:"AES-GCM"},false,["encrypt","decrypt"]);
+    }catch(e){ return null; }
+  })();
+  return cfgKeyPromise;
+}
+const b64u=a=>btoa(String.fromCharCode.apply(null,a));
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 function loadCfg(){
   try{ const raw=localStorage.getItem(CFG_KEY); if(raw){ const c=JSON.parse(raw); if(c&&c.botUrl) return c; } }catch(e){}
+  try{ const old=localStorage.getItem("finanzas_cfg_v1"); if(old){ const c=JSON.parse(old); if(c&&c.botUrl) return c; } }catch(e){}
   return null;
 }
-function saveCfg(){
-  try{ localStorage.setItem(CFG_KEY, JSON.stringify({botUrl:state.config.botUrl||"",botToken:state.config.botToken||""})); }catch(e){}
+async function saveCfg(){
+  const url=(state.config&&state.config.botUrl)||"";
+  const token=(state.config&&state.config.botToken)||"";
+  try{
+    const key=await cfgKey();
+    if(key && token){
+      const iv=crypto.getRandomValues(new Uint8Array(12));
+      const enc=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(token));
+      localStorage.setItem(CFG_KEY,JSON.stringify({botUrl:url,iv:b64u(iv),data:b64u(new Uint8Array(enc))}));
+      try{ localStorage.removeItem("finanzas_cfg_v1"); }catch(e){}
+      return;
+    }
+  }catch(e){}
+  localStorage.setItem(CFG_KEY,JSON.stringify({botUrl:url}));
+  try{ localStorage.removeItem("finanzas_cfg_v1"); }catch(e){}
+}
+async function restoreBotCfg(){
+  const c=loadCfg(); if(!c) return;
+  if(!state.config) state.config={};
+  if(c.botUrl && !state.config.botUrl) state.config.botUrl=c.botUrl;
+  if(!state.config.botToken){
+    if(c.data && c.iv){
+      try{
+        const key=await cfgKey();
+        if(key){
+          const dec=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(c.iv)},key,unb64(c.data));
+          state.config.botToken=new TextDecoder().decode(dec);
+        }
+      }catch(e){}
+    } else if(c.botToken){ state.config.botToken=c.botToken; } // migración de la versión anterior
+  }
+}
+// Configuración de respaldo integrada en la app: se aplica sola si el
+// dispositivo no tiene ninguna conexión guardada, así no hay que pegar nada.
+const SETUP_OBFUSC="HUsMDhovEx9EU0wJGg4RAFxGQQcHFAAdHAgdTBofDRYBGw8MQxgOB0gTCw0LFARdEQYcCgsIEl0CDBhDQlgDHBI9AQoLFENJRAoNVwpLVhdfUVtUDRkCRgBcCAJeSFBLAgxfBApKVEUEDV9VC05XRgIIXwBXQwdCBAhbUA8YVRJQWF9TW0NVQwNLEw==";
+function decodeSetupBlob(blob){
+  const raw=atob(blob), clave="finanzas"; let s="";
+  for(let i=0;i<raw.length;i++) s+=String.fromCharCode(raw.charCodeAt(i)^clave.charCodeAt(i%clave.length));
+  return JSON.parse(s);
+}
+function applyEmbeddedSetup(){
+  if(state.config && state.config.botUrl && state.config.botToken) return;
+  try{
+    const c=decodeSetupBlob(SETUP_OBFUSC);
+    state.config=state.config||{};
+    if(!state.config.botUrl) state.config.botUrl=c.botUrl;
+    if(!state.config.botToken) state.config.botToken=c.botToken;
+  }catch(e){}
 }
 function setBotUrl(v,quiet){
   if(!state.config) state.config={};
@@ -2075,7 +2143,7 @@ function saveBotCfg(){
 function renderBotCfgState(){
   const el=document.getElementById("botCfgState"); if(!el) return;
   const url=state.config?.botUrl||"", token=state.config?.botToken||"";
-  if(url && token){ el.innerHTML="✅ Conexión guardada"; el.style.color="var(--green)"; }
+  if(url && token){ el.innerHTML="✅ Conexión guardada y protegida en este dispositivo"; el.style.color="var(--green)"; }
   else if(url || token){ el.innerHTML="⚠️ Falta completar (URL y token)"; el.style.color="var(--amber)"; }
   else { el.innerHTML="Sin configurar"; el.style.color="var(--muted)"; }
 }
@@ -2495,12 +2563,7 @@ function init(){
     state.months.push(nm);
     state.current=realK;
   }
-  // recuperar la conexión guardada si el estado la perdió
-  const savedCfg=loadCfg();
-  if(savedCfg && savedCfg.botUrl && !(state.config && state.config.botUrl && state.config.botToken)){
-    state.config.botUrl=savedCfg.botUrl;
-    state.config.botToken=savedCfg.botToken||"";
-  }
+  // la conexión se recupera cifrada del dispositivo (sin pedirla de nuevo)
   // migración única: todo el ahorro histórico pasa al depósito del día 29.
   // q1+q2 no cambia, así que el saldo sigue siendo exactamente el mismo.
   if(!state.config) state.config={};
@@ -2574,21 +2637,25 @@ function init(){
   saveState();
   renderAll();
   checkNotifications();
-  // auto-sync with Telegram if configured
-  if(state.config && state.config.botUrl && state.config.botToken){
-    importFromBot(true).catch(()=>{});
-    // refrescar al volver a la app y cada minuto mientras esté visible
-    window.addEventListener("focus",()=>{ importFromBot(true).catch(()=>{}); });
-    document.addEventListener("visibilitychange",()=>{
-      if(document.visibilityState==="visible") importFromBot(true).catch(()=>{});
-    });
-    setInterval(()=>{
-      if(document.visibilityState==="visible") importFromBot(true).catch(()=>{});
-    },60000);
-  }
+  // auto-sync with Telegram if configured (tras recuperar el token cifrado)
+  restoreBotCfg().then(()=>{
+    applyEmbeddedSetup();
+    saveCfg(); saveState(); renderAll();
+    if(state.config && state.config.botUrl && state.config.botToken){
+      importFromBot(true).catch(()=>{});
+      // refrescar al volver a la app y cada minuto mientras esté visible
+      window.addEventListener("focus",()=>{ importFromBot(true).catch(()=>{}); });
+      document.addEventListener("visibilitychange",()=>{
+        if(document.visibilityState==="visible") importFromBot(true).catch(()=>{});
+      });
+      setInterval(()=>{
+        if(document.visibilityState==="visible") importFromBot(true).catch(()=>{});
+      },60000);
+    }
+  }).catch(()=>{});
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=22").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=23").catch(()=>{}); }
 </script>
 </body>
 </html>

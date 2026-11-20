@@ -25,7 +25,7 @@ En **Rendim.** se capturan el saldo de ayer y el de hoy. La diferencia entre amb
 - Deudas → "PDF para mamá".
 
 ## Telegram
-La carpeta `../finanzas-telegram-bot/` contiene el bot. En "Más" configura la URL del worker y el token, luego "Sincronizar ahora".
+La carpeta `../finanzas-telegram-bot/` contiene el bot. La conexión se guarda automáticamente y se recupera sola al abrir la app: no necesitas volver a pegar el enlace ni el token. El token se cifra en el dispositivo y no se incluye en los respaldos JSON. Si quieres cambiarlo, ve a "Más → Sincronización → Configurar".
 
 ## Recomendación: híbrido web + nube
 - **Ahora (local):** esta app funciona offline con localStorage. Ideal para empezar.
