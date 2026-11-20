@@ -289,7 +289,7 @@
       <div class="card">
         <h3>📅 Pagos estimados</h3>
         <div style="overflow-x:auto"><table id="simTabla" class="simtable"></table></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:8px">Los pagos avanzan el día 13. “Neto” = deuda del mes menos el apoyo recibido.</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">Los pagos avanzan el día 12 (día en que pago todo). “Neto” = deuda del mes menos el apoyo recibido.</div>
       </div>
       <div class="card">
         <h3>🧾 Detalle de lo que queda</h3>
@@ -497,11 +497,11 @@
           <button class="btn btn-ghost btn-sm" onclick="prevMonth()">◀ Mes anterior</button>
           <button class="btn btn-ghost btn-sm" onclick="nextMonth()">Mes siguiente ▶</button>
         </div>
-        <div style="margin-top:8px"><button class="btn btn-sm" onclick="createNewMonth()">➕ Crear mes nuevo (día 13)</button></div>
+        <div style="margin-top:8px"><button class="btn btn-sm" onclick="createNewMonth()">➕ Crear mes nuevo (día 12)</button></div>
       </div>
       <div class="card">
         <h3>🔔 Notificaciones</h3>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Avisos el día 13 y recordatorio de rendimiento por semana.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Avisos el día 12 (pago todo) y recordatorio de rendimiento por semana.</div>
         <button class="btn btn-ghost btn-sm" onclick="enableNotifications()">Activar notificaciones</button>
       </div>
       <div class="card">
@@ -1810,50 +1810,69 @@ function importData(e){
   e.target.value="";
 }
 
-// pdf
+// pdf (paleta rosa y azul pastel)
+const PDF_ROSA=[252,228,238], PDF_ROSA_FUERTE=[242,150,186], PDF_ROSA_TINTA=[168,60,105];
+const PDF_AZUL=[214,235,252], PDF_AZUL_TINTA=[51,99,163], PDF_TINTA=[84,70,99];
+function pdfChrome(doc,title){
+  doc.setFillColor(...PDF_ROSA); doc.rect(0,0,210,28,"F");
+  doc.setFillColor(...PDF_ROSA_FUERTE); doc.rect(0,28,210,2,"F");
+  doc.setTextColor(...PDF_ROSA_TINTA); doc.setFontSize(16); doc.setFont(undefined,"bold");
+  doc.text(title,14,18); doc.setFont(undefined,"normal");
+  return 38;
+}
+function pdfLine(doc,y,t,opts={}){
+  if(opts.section){
+    doc.setFillColor(...PDF_AZUL); doc.rect(10,y-5,190,7,"F");
+    doc.setFillColor(...PDF_ROSA_FUERTE); doc.rect(10,y-5,1.5,7,"F");
+    doc.setTextColor(...PDF_AZUL_TINTA);
+  }else doc.setTextColor(...PDF_TINTA);
+  doc.setFontSize(opts.size||11);
+  doc.setFont(undefined,(opts.bold||opts.section)?"bold":"normal");
+  doc.text(t,14,y);
+  return y+(opts.gap||6);
+}
 function pdfMensual(){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   const m=currentMonth();
-  let y=14;
-  const line=(t,opts={})=>{ doc.setFontSize(opts.size||11); if(opts.bold) doc.setFont(undefined,"bold"); else doc.setFont(undefined,"normal"); doc.text(t,14,y); y+=opts.gap||6; };
-  line("FINANZAS PERSONALES - "+m.label,{size:16,bold:true,gap:8});
-  line("Resumen",{bold:true});
+  let y=pdfChrome(doc,"FINANZAS PERSONALES - "+m.label);
+  const line=(t,opts={})=>{ y=pdfLine(doc,y,t,opts); };
+  line("Resumen",{section:true,gap:8});
   line("Pagar BBVA: $"+fmt(msiTotal(m,"BBVA")));
   line("Fijos (MSI+deuda+apoyo): $"+fmt(fijosTotal(m)));
   line("Gasto variable: $"+fmt(gastoTotal(m,"mama")+gastoTotal(m,"yo")));
   line("Invertido: $"+fmt((m.inversion.q1||0)+(m.inversion.q2||0)));
   line("Rendimiento: $"+fmt(m.inversion.rendimiento||0));
   line("Saldo ahorrado: $"+fmt(totalSaved())+" ("+(totalSaved()/META*100).toFixed(2)+"%)",{gap:8});
-  line("Pagos por tarjeta",{bold:true,gap:6});
+  line("Pagos por tarjeta",{section:true,gap:6});
   ["BBVA","Mifel","MercadoPago"].forEach(t=>{
     const its=m.msi.filter(x=>x.tarjeta===t && !(x.pago>=x.total) && !x.liquidado);
     if(!its.length) return;
     line(t+": $"+fmt(its.reduce((s,x)=>s+(Number(x.monto)||0),0)),{bold:true});
     its.forEach(x=>line("  - "+x.desc+": $"+fmt(x.monto)+" ("+x.pago+"/"+x.total+")"));
   });
-  line("Gasto variable",{bold:true,gap:6});
+  line("Gasto variable",{section:true,gap:6});
   line("Con mamá: $"+fmt(gastoTotal(m,"mama"))+" / $"+fmt(m.gasto.mama.budget));
   m.gasto.mama.items.forEach(x=>line("  - "+x.fecha+" "+x.desc+": $"+fmt(x.monto)));
   line("Yo: $"+fmt(gastoTotal(m,"yo"))+" / $"+fmt(m.gasto.yo.budget));
   m.gasto.yo.items.forEach(x=>line("  - "+x.fecha+" "+x.desc+": $"+fmt(x.monto)));
-  line("Cuentas con mamá",{bold:true,gap:6});
+  line("Cuentas con mamá",{section:true,gap:6});
   m.deudaMama.forEach(x=>line("  - "+x.desc+": $"+fmt(x.monto)+" ("+x.pago+"/"+x.total+")"));
   line("Apoyo: $"+fmt(m.apoyo));
-  line("Inversión",{bold:true,gap:6});
+  line("Inversión",{section:true,gap:6});
   line("Depósito de ahorro (2ª quincena): "+depositoLabel(m)+(depositoMovido(m)?" (14 en fin de semana)":""));
   line("Ahorro (2ª quincena): $"+fmt(m.inversion.q2||0));
   line("Rendimiento mes: $"+fmt(m.inversion.rendimiento||0));
   // comparacion
   const prev=prevMonthId(m.id)?state.months.find(x=>x.id===prevMonthId(m.id)):null;
   if(prev){
-    line("vs mes anterior",{bold:true,gap:6});
+    line("vs mes anterior",{section:true,gap:6});
     const pg=prevGasto(prev); const cg=gastoTotal(m,"mama")+gastoTotal(m,"yo");
     line("Gasto: $"+fmt(pg)+" -> $"+fmt(cg));
     line("Inversión: $"+fmt((prev.inversion.q1||0)+(prev.inversion.q2||0))+" -> $"+fmt((m.inversion.q1||0)+(m.inversion.q2||0)));
     line("Rendimiento: $"+fmt(prev.inversion.rendimiento||0)+" -> $"+fmt(m.inversion.rendimiento||0));
   }
-  line("Historial MSI",{bold:true,gap:6});
+  line("Historial MSI",{section:true,gap:6});
   m.msi.forEach(x=>line(x.tarjeta+" "+x.desc+" $"+fmt(x.monto)+" "+fmtI(x.pago)+"/"+fmtI(x.total)));
   doc.save("finanzas-"+m.id+".pdf");
   toast("PDF generado");
@@ -1862,9 +1881,9 @@ function pdfMama(){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   const m=currentMonth();
-  let y=14;
-  const line=(t,opts={})=>{ doc.setFontSize(opts.size||11); if(opts.bold) doc.setFont(undefined,"bold"); else doc.setFont(undefined,"normal"); doc.text(t,14,y); y+=opts.gap||6; };
-  line("CUENTA CON MAMÁ - "+m.label,{size:16,bold:true,gap:8});
+  let y=pdfChrome(doc,"CUENTA CON MAMÁ - "+m.label);
+  const line=(t,opts={})=>{ y=pdfLine(doc,y,t,opts); };
+  line("Desglose con mamá",{section:true,gap:8});
   m.deudaMama.forEach(x=>{ line(x.desc+": $"+fmt(x.monto)+" ("+fmtI(x.pago)+"/"+fmtI(x.total)+")",{bold:true}); });
   line("Total que le debes: $"+fmt(msiMamaPendTotal(m)),{bold:true,gap:8});
   line("Lo descontado / pagado por ti (gasto variable compartido): $"+fmt(gastoTotal(m,"mama")),{gap:6});
@@ -2330,7 +2349,7 @@ function init(){
   const k=monthKey(now);
   const last=state.months.length?state.months[state.months.length-1].id:null;
   // auto-create only if the latest data month is the immediate predecessor of today (evita saltos con datos historicos)
-  if(last && addOneMonth(last)===k && !state.months.find(m=>m.id===k) && now.getDate()>=13){
+  if(last && addOneMonth(last)===k && !state.months.find(m=>m.id===k) && now.getDate()>=12){
     state.current=last;
     createNewMonth();
   }
@@ -2437,7 +2456,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=19").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=21").catch(()=>{}); }
 </script>
 </body>
 </html>

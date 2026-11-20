@@ -12,7 +12,7 @@ Diseño rosa 🪼 con ballena 🐳 hacia el primer millón, pestañas abajo.
 Resumen, Deudas, Gastos, Inversión, Rendim., Meta, Más.
 
 ## Automatización
-El día 13 de cada mes (al abrir la app) se crea el mes nuevo y los MSI avanzan un pago automáticamente. Los liquidados se marcan "Liquidado" y no se borran. No hay botón manual de "+1 pago".
+El día 12 de cada mes (al abrir la app) se crea el mes nuevo y los MSI avanzan un pago automáticamente. Los liquidados se marcan "Liquidado" y no se borran. No hay botón manual de "+1 pago".
 
 ## PDFs
 - "Más → PDF mensual" genera el PDF del mes.
