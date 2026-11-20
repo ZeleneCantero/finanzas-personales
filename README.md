@@ -22,6 +22,9 @@ En **Rendim.** se capturan el saldo de ayer y el de hoy. La diferencia entre amb
 
 ## PDFs
 - "Más → PDF mensual" genera el PDF del mes.
+
+## Notificaciones
+Actívalas en "Más → Notificaciones". La app avisa una vez al día con lo que generó el dinero ese día, usando la tasa calculada a partir de tus saldos. También avisa cuando se crea el mes nuevo. El aviso diario se muestra mientras la app esté abierta; para recibirlo con la app cerrada haría falta Web Push (VAPID) o un mensaje programado del bot.
 - Deudas → "PDF para mamá".
 
 ## Telegram

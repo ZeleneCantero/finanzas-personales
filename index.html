@@ -514,8 +514,9 @@
       </div>
       <div class="card">
         <h3>🔔 Notificaciones</h3>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Avisos el día 12 (pago todo) y recordatorio de rendimiento por semana.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Avisos el día 12 (pago todo) y aviso diario con lo que generó tu dinero.</div>
         <button class="btn btn-ghost btn-sm" onclick="enableNotifications()">Activar notificaciones</button>
+        <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="testRendNotification()">🔔 Probar aviso de rendimiento</button>
       </div>
       <div class="card">
         <h3>🌙 Apariencia</h3>
@@ -2502,18 +2503,39 @@ async function enableNotifications(){
   }
 }
 function notify(title,body){
-  if(!state.config || !state.config.notificationsEnabled) return;
-  if(Notification.permission!=="granted") return;
-  try { new Notification(title,{body,icon:"icon.svg"}); } catch(e){}
+  if(!state.config || !state.config.notificationsEnabled) return false;
+  if(typeof Notification==="undefined" || Notification.permission!=="granted") return false;
+  try { new Notification(title,{body,icon:"icon.svg"}); return true; } catch(e){ return false; }
+}
+function rendNotificacionHoy(){
+  const dias=rendSerieDias(currentMonth());
+  return Math.round((dias[new Date().getDate()-1]||0)*100)/100;
+}
+function notifyRendimiento(){
+  const monto=rendNotificacionHoy();
+  return notify("💰 Rendimiento de hoy",`Hoy generaste $${fmt(monto)}. Tasa diaria ${(rendTasa()*100).toFixed(6)}% · Saldo $${fmt(rendSaldos().hoy)}.`);
+}
+function testRendNotification(){
+  if(!state.config || !state.config.notificationsEnabled){ toast("Activa las notificaciones primero","warn"); return; }
+  toast(notifyRendimiento()?"Notificación enviada":"No se pudo enviar","ok");
 }
 function checkNotifications(){
   const now=new Date();
   if(!state.config) state.config={};
-  // day 13: month update
+  // día 13: mes nuevo y MSI avanzados
   if(now.getDate()===13 && state.config.lastNotifMonth!==monthKey(now)){
-    notify("Finanzas actualizadas","Se ha creado el mes nuevo y actualizado tus MSI. Revisa tu app.");
-    state.config.lastNotifMonth=monthKey(now);
-    saveState();
+    if(notify("Finanzas actualizadas","Se ha creado el mes nuevo y actualizado tus MSI. Revisa tu app.")){
+      state.config.lastNotifMonth=monthKey(now);
+      saveState();
+    }
+  }
+  // aviso diario de rendimiento (una vez al día)
+  const hoy=todayKey();
+  if(state.config.lastRendNotif!==hoy && Math.abs(rendNotificacionHoy())>0.001){
+    if(notifyRendimiento()){
+      state.config.lastRendNotif=hoy;
+      saveState();
+    }
   }
 }
 
@@ -2653,9 +2675,15 @@ function init(){
       },60000);
     }
   }).catch(()=>{});
+  // el aviso de rendimiento no depende de Telegram
+  window.addEventListener("focus",()=>{ checkNotifications(); });
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="visible") checkNotifications();
+  });
+  setInterval(()=>{ if(document.visibilityState==="visible") checkNotifications(); },60000);
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=23").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=24").catch(()=>{}); }
 </script>
 </body>
 </html>
