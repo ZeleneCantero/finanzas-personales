@@ -50,6 +50,8 @@
   .card-link:active{transform:scale(.99)}
   .empty-state{text-align:center;padding:18px 10px;color:var(--muted);font-size:13px;background:var(--surface-2);border-radius:12px;border:1px dashed var(--line)}
   .empty-state .em{font-size:24px;display:block;margin-bottom:4px}
+  .deposito-note{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:8px 10px;line-height:1.45}
+  body.dark .deposito-note{background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.35)}
   .card h3{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--pink-dark)}
   .row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
   .row:last-child{border-bottom:none}
@@ -211,6 +213,10 @@
           <div class="stat"><div class="v" id="stFijos">$0</div><div class="l">Fijos (MSI+deuda+apoyo)</div></div>
           <div class="stat"><div class="v" id="stVar">$0</div><div class="l">Gasto variable</div></div>
           <div class="stat"><div class="v" id="stInv">$0</div><div class="l">Invertido</div></div>
+        </div>
+        <div class="row" style="margin-top:8px;border-top:1px solid var(--line);padding-top:7px">
+          <span>🗓️ Depósito de ahorro <span style="font-size:11px;color:var(--muted)">(2ª quincena)</span></span>
+          <span id="resDeposito" style="font-weight:700;font-size:12px;text-align:right"></span>
         </div>
       </div>
       <div class="card">
@@ -395,8 +401,9 @@
         <h3 id="invMesLbl">💰 Aportaciones de este mes</h3>
         <div class="grid2">
           <div><label style="font-size:11px;color:var(--muted)">1ª quincena</label><input type="number" id="q1" onchange="setInv('q1',this.value)"></div>
-          <div><label style="font-size:11px;color:var(--muted)">2ª quincena</label><input type="number" id="q2" onchange="setInv('q2',this.value)"></div>
+          <div><label style="font-size:11px;color:var(--muted)" title="Tu ahorro llega con esta quincena">2ª quincena · tu ahorro</label><input type="number" id="q2" onchange="setInv('q2',this.value)"></div>
         </div>
+        <div class="deposito-note" id="invDeposito" style="margin-top:8px;font-size:12px;color:var(--blue)"></div>
         <div style="margin-top:8px;font-size:13px" id="invStatus"></div>
       </div>
       <div class="card">
@@ -690,6 +697,38 @@ function diasTranscurridos(m){
   if(m.id>actual) return 0;
   return Math.min(dim,ahora.getDate());
 }
+// ---------- FECHA DE AHORRO (2ª quincena) ----------
+// Tu empresa deposita el 14 de cada mes. Si el 14 cae sábado o domingo,
+// el depósito se adelanta al viernes anterior (sábado 13 / domingo 12).
+const DIAS_ES=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const MESES_ES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+function fechaDeposito(m){
+  const id=(m&&m.id)||monthKey(new Date());
+  const [y,mo]=id.split("-").map(Number);
+  const d=new Date(y,mo-1,14);
+  const dow=d.getDay();
+  if(dow===6) d.setDate(13);        // sábado -> viernes 13
+  else if(dow===0) d.setDate(12);   // domingo -> viernes 12
+  return d;
+}
+function depositoMovido(m){ return fechaDeposito(m).getDate()!==14; }
+function depositoLabel(m){
+  const d=fechaDeposito(m);
+  return DIAS_ES[d.getDay()]+" "+d.getDate()+" de "+MESES_ES[d.getMonth()];
+}
+// >0 faltan días, 0 es hoy, <0 ya pasó
+function depositoCuenta(m){
+  const d=fechaDeposito(m); d.setHours(0,0,0,0);
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  return Math.round((d-hoy)/86400000);
+}
+function depositoTexto(m){
+  const n=depositoCuenta(m), d=depositoLabel(m);
+  const aviso=depositoMovido(m)?" (el 14 cae en fin de semana)":"";
+  if(n>0) return `Tu ahorro se deposita el ${d}${aviso} · faltan ${n} día${n===1?"":"s"}`;
+  if(n===0) return `¡Hoy depositan tu ahorro! ${d}${aviso}`;
+  return `Tu ahorro se depositó el ${d}${aviso} · hace ${-n} día${-n===1?"":"s"}`;
+}
 function rendMensual(m){
   if(Array.isArray(m.rendimientoSemanas)&&m.rendimientoSemanas.length)
     return m.rendimientoSemanas.reduce((s,x)=>s+(Number(x)||0),0);
@@ -868,6 +907,12 @@ function renderResumen(){
   const rr=document.getElementById("resRendHoy"); if(rr){ rr.style.color="var(--ahorro)"; setAnimated(rr,rendAcumulado(currentMonth()),money2); }
   renderCompare("cmpRend", prev? (prev.inversion.rendimiento||0):null, m.inversion.rendimiento||0, false);
   document.getElementById("metaMini").innerHTML="Saldo: $"+fmt(totalSaved())+" · "+(totalSaved()/META*100).toFixed(2)+"% del millón";
+  const rd=document.getElementById("resDeposito");
+  if(rd){
+    rd.textContent=depositoLabel(m);
+    rd.style.color=depositoCuenta(m)>0?"var(--proximo)":"var(--ahorro)";
+    rd.title=depositoTexto(m);
+  }
 }
 
 function prevGasto(pm){ return gastoVariableTotal(pm); }
@@ -1146,6 +1191,7 @@ function renderInversion(){
   document.getElementById("q1").value=m.inversion.q1||0;
   document.getElementById("q2").value=m.inversion.q2||0;
   document.getElementById("rendMes").value=m.inversion.rendimiento||0;
+  const dep=document.getElementById("invDeposito"); if(dep) dep.textContent="🗓️ "+depositoTexto(m);
   const total=(m.inversion.q1||0)+(m.inversion.q2||0);
   const min=state.config.minInv||23100;
   const ok=total>=min;
@@ -1212,7 +1258,7 @@ function renderRendim(){
   setE("rendDiario","$"+fmt(diario));
   const barra=document.getElementById("rendProgBar"); if(barra) barra.style.width=Math.min(100,total?acum/total*100:0)+"%";
   const prog=document.getElementById("rendProgreso");
-  if(prog) prog.textContent=`Días: ${trans} de ${dim} · Mensual: $${fmt(total)} · ${m.id===(currentMonth()&&currentMonth().id)?"Sigue acumulándose cada día":"Mes completo"}`;
+  if(prog) prog.textContent=`Días: ${trans} de ${dim} · Mensual: $${fmt(total)} · Depósito: ${depositoLabel(m)} · ${m.id===(currentMonth()&&currentMonth().id)?"Sigue acumulándose cada día":"Mes completo"}`;
   const rw=document.getElementById("rendWeeks");
   rw.innerHTML="";
   m.rendimientoSemanas.forEach((v,i)=>{
@@ -1355,6 +1401,7 @@ function buildResumenTexto(m){
   const inv=(m.inversion.q1||0)+(m.inversion.q2||0);
   let t=`FINANZAS ${m.label}\n`;
   t+=`Pagar BBVA: $${fmt(bbva)}\nFijos: $${fmt(fijos)}\nGasto variable: $${fmt(varT)}\nInvertido: $${fmt(inv)}\nRendimiento: $${fmt(m.inversion.rendimiento||0)}\n`;
+  t+=`Ahorro (2ª quincena): ${depositoLabel(m)}${depositoMovido(m)?" (14 en fin de semana)":""}\n`;
   t+=`Saldo ahorrado: $${fmt(totalSaved())} (${(totalSaved()/META*100).toFixed(2)}%)\n`;
   t+=`\nMSI:\n`;
   m.msi.forEach(x=>t+=`- ${x.tarjeta} ${x.desc}: $${fmt(x.monto)} (${fmtI(x.pago)}/${fmtI(x.total)})\n`);
@@ -1784,6 +1831,7 @@ function pdfMensual(){
   m.deudaMama.forEach(x=>line("  - "+x.desc+": $"+fmt(x.monto)+" ("+x.pago+"/"+x.total+")"));
   line("Apoyo: $"+fmt(m.apoyo));
   line("Inversión",{bold:true,gap:6});
+  line("Depósito de ahorro (2ª quincena): "+depositoLabel(m)+(depositoMovido(m)?" (14 en fin de semana)":""));
   line("1ª quincena: $"+fmt(m.inversion.q1||0));
   line("2ª quincena: $"+fmt(m.inversion.q2||0));
   line("Rendimiento mes: $"+fmt(m.inversion.rendimiento||0));
@@ -2373,7 +2421,7 @@ function init(){
   }
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=17").catch(()=>{}); }
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=18").catch(()=>{}); }
 </script>
 </body>
 </html>
