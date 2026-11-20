@@ -181,6 +181,38 @@
   body.dark .bottomnav{background:#16213e;border-color:#334155}
   body.dark .card{box-shadow:0 6px 20px rgba(0,0,0,.24)}
   body.compact .btn.btn-sm{min-height:38px}
+  /* Pantalla Más: jerarquía clara y acciones del mismo tamaño */
+  .mas-intro{display:flex;align-items:center;gap:12px;padding:14px;margin-bottom:12px;border-radius:16px;border:1px solid rgba(236,72,153,.18);background:linear-gradient(135deg,var(--pink-light),rgba(59,130,246,.12))}
+  .mas-intro-ic{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:13px;background:var(--card);font-size:22px;box-shadow:0 2px 8px rgba(17,24,39,.07)}
+  .mas-intro-tx b{display:block;font-size:15px;color:var(--pink-dark)}
+  .mas-intro-tx small{display:block;font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .mas-section h3{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+  .mas-section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .mas-section-head h3{margin:0}
+  .mas-note{font-size:11px;color:var(--muted);line-height:1.45;margin-top:8px}
+  .mas-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .mas-action{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:94px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--text);text-align:left;transition:transform .12s,border-color .12s}
+  .mas-action:active{transform:scale(.98)}
+  .mas-action:hover{border-color:var(--pink)}
+  .mas-action-ic{font-size:20px;line-height:1}
+  .mas-action-tx b{display:block;font-size:12px;font-weight:700}
+  .mas-action-tx small{display:block;font-size:10px;color:var(--muted);margin-top:2px;line-height:1.3}
+  .mas-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .mas-row .btn{width:100%}
+  .btn-block{display:inline-flex;align-items:center;justify-content:center;width:100%;margin-top:8px}
+  .mas-field{margin-top:10px}
+  .mas-field label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+  .mas-field small{display:block;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
+  .mas-status{font-size:11px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--line);line-height:1.4}
+  .mas-config{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px}
+  .mas-config-label{font-size:11px;color:var(--muted);margin:10px 0 4px}
+  .mas-config-label:first-child{margin-top:0}
+  .mas-config input+input{margin-top:6px}
+  .mas-config input+.btn{margin-top:8px}
+  body.dark .mas-intro{border-color:rgba(236,72,153,.28);background:linear-gradient(135deg,#3b1d3a,rgba(59,130,246,.16))}
+  body.dark .mas-action{background:#1e293b}
+  body.compact .mas-intro{padding:10px;margin-bottom:8px}
+  body.compact .mas-action{min-height:78px;padding:8px}
 </style>
 </head>
 <body>
@@ -495,64 +527,89 @@
 
     <!-- MAS -->
     <div class="tab" id="tab-mas">
-      <div class="card">
-        <h3>💾 Respaldo de datos</h3>
-        <div class="grid2">
-          <button class="btn btn-ghost" onclick="exportData()">⬇️ Descargar JSON</button>
-          <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()">⬆️ Restaurar</button>
-        <button class="btn btn-ghost" style="margin-top:6px" onclick="exportCSV()">⬇️ Exportar CSV (gastos)</button>
+      <div class="mas-intro">
+        <div class="mas-intro-ic">⚙️</div>
+        <div class="mas-intro-tx">
+          <b>Ajustes y herramientas</b>
+          <small>Tus datos, avisos y conexión en un solo lugar.</small>
         </div>
-        <input type="file" id="importFile" accept="application/json" class="hidden" onchange="importData(event)">
-      </div>
-      <div class="card">
-        <h3>📄 PDF mensual</h3>
-        <button class="btn" onclick="pdfMensual()">Generar PDF del mes</button>
       </div>
 
-      <div class="card">
-        <h3>⚙️ Mes</h3>
-        <div class="grid2">
-          <button class="btn btn-ghost btn-sm" onclick="prevMonth()">◀ Mes anterior</button>
-          <button class="btn btn-ghost btn-sm" onclick="nextMonth()">Mes siguiente ▶</button>
+      <section class="card mas-section">
+        <h3>💾 Datos y respaldos</h3>
+        <div class="mas-grid">
+          <button class="mas-action" onclick="exportData()">
+            <span class="mas-action-ic">⬇️</span>
+            <span class="mas-action-tx"><b>Descargar JSON</b><small>Copia completa, sin token</small></span>
+          </button>
+          <button class="mas-action" onclick="document.getElementById('importFile').click()">
+            <span class="mas-action-ic">⬆️</span>
+            <span class="mas-action-tx"><b>Restaurar</b><small>Desde un archivo JSON</small></span>
+          </button>
+          <button class="mas-action" onclick="exportCSV()">
+            <span class="mas-action-ic">📊</span>
+            <span class="mas-action-tx"><b>Exportar CSV</b><small>Gastos del mes</small></span>
+          </button>
+          <button class="mas-action" onclick="pdfMensual()">
+            <span class="mas-action-ic">📄</span>
+            <span class="mas-action-tx"><b>PDF mensual</b><small>Resumen para descargar</small></span>
+          </button>
         </div>
-        <div style="margin-top:8px"><button class="btn btn-sm" onclick="createNewMonth()">➕ Crear mes nuevo (día 12)</button></div>
-      </div>
-      <div class="card">
+        <input type="file" id="importFile" accept="application/json" class="hidden" onchange="importData(event)">
+      </section>
+
+      <section class="card mas-section">
+        <h3>📅 Mes</h3>
+        <div class="mas-row">
+          <button class="btn btn-ghost" onclick="prevMonth()">◀ Anterior</button>
+          <button class="btn btn-ghost" onclick="nextMonth()">Siguiente ▶</button>
+        </div>
+        <button class="btn btn-block" onclick="createNewMonth()">➕ Crear mes nuevo (día 12)</button>
+        <p class="mas-note">Al crear el mes, los pagos de MSI avanzan automáticamente.</p>
+      </section>
+
+      <section class="card mas-section">
         <h3>🔔 Notificaciones</h3>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Aviso diario con lo que generó tu dinero, también con la app cerrada. Solo necesitas activarlos una vez.</div>
-        <button class="btn btn-ghost btn-sm" onclick="enableNotifications()">Activar notificaciones</button>
-        <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="testRendNotification()">🔔 Probar aviso de rendimiento</button>
-        <div style="margin-top:10px">
-          <label style="font-size:11px;color:var(--muted)" for="avisoHora">Hora del aviso diario</label>
-          <select id="avisoHora" onchange="setAvisoHora(this.value)" style="width:100%;margin-top:4px"></select>
-          <div id="avisoHoraStatus" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
+        <p class="mas-note">Aviso diario de rendimiento, también con la app cerrada. Actívalo una sola vez.</p>
+        <div class="mas-row" style="margin-top:10px">
+          <button class="btn" onclick="enableNotifications()">Activar notificaciones</button>
+          <button class="btn btn-ghost" onclick="testRendNotification()">🔔 Probar aviso</button>
         </div>
-        <div id="pushStatus" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
-      </div>
-      <div class="card">
+        <div class="mas-field">
+          <label for="avisoHora">Hora del aviso diario</label>
+          <select id="avisoHora" onchange="setAvisoHora(this.value)"></select>
+          <small id="avisoHoraStatus"></small>
+        </div>
+        <div id="pushStatus" class="mas-status"></div>
+      </section>
+
+      <section class="card mas-section">
         <h3>🌙 Apariencia</h3>
         <div class="theme-opts" role="radiogroup" aria-label="Tema de la aplicación">
           <label class="theme-opt"><input type="radio" name="themeMode" value="system" onchange="setThemeMode(this.value)"><span>🖥️ Predeterminado del sistema</span></label>
           <label class="theme-opt"><input type="radio" name="themeMode" value="light" onchange="setThemeMode(this.value)"><span>☀️ Claro</span></label>
           <label class="theme-opt"><input type="radio" name="themeMode" value="dark" onchange="setThemeMode(this.value)"><span>🌙 Oscuro</span></label>
         </div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="toggleCompact()">Alternar modo compacto</button>
-      </div>
-      <div class="card">
-        <h3>🔗 Sincronización</h3>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Los datos se sincronizan automáticamente con Telegram.</div>
-        <button class="btn btn-ghost btn-sm" onclick="toggleBotConfig()">⚙️ Configurar</button>
-        <div id="botConfig" class="hidden" style="margin-top:8px">
-          <div style="font-size:11px;color:var(--muted)">Forma fácil: pega aquí tu enlace de configuración</div>
-          <input id="setupLinkInput" placeholder="Pega el enlace que te di (…?setup=…)" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:6px">
-          <button class="btn btn-sm" style="margin-top:6px" onclick="applySetupLink()">🔗 Conectar con enlace</button>
-          <div style="font-size:11px;color:var(--muted);margin:10px 0 4px">O escribe la URL y el token:</div>
-          <input id="botUrl" placeholder="https://...workers.dev" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="setBotUrl(this.value,true)" onchange="setBotUrl(this.value)" style="margin-top:6px">
-          <input id="botToken" placeholder="ARTIFACT_TOKEN" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="setBotToken(this.value,true)" onchange="setBotToken(this.value)" style="margin-top:6px">
-          <button class="btn btn-sm" style="margin-top:8px" onclick="saveBotCfg()">💾 Guardar conexión</button>
+        <button class="btn btn-ghost btn-block" onclick="toggleCompact()">Alternar modo compacto</button>
+      </section>
+
+      <section class="card mas-section">
+        <div class="mas-section-head">
+          <h3>🔗 Telegram</h3>
+          <button class="btn btn-ghost btn-sm" onclick="toggleBotConfig()">⚙️ Configurar</button>
+        </div>
+        <div id="syncStatusMas" class="sync-status"></div>
+        <div id="botConfig" class="hidden mas-config">
+          <div class="mas-config-label">Forma fácil: pega aquí tu enlace de configuración</div>
+          <input id="setupLinkInput" placeholder="Pega el enlace que te di (…?setup=…)" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button class="btn btn-sm" onclick="applySetupLink()">🔗 Conectar con enlace</button>
+          <div class="mas-config-label">O escribe la URL y el token:</div>
+          <input id="botUrl" placeholder="https://...workers.dev" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="setBotUrl(this.value,true)" onchange="setBotUrl(this.value)">
+          <input id="botToken" placeholder="ARTIFACT_TOKEN" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="setBotToken(this.value,true)" onchange="setBotToken(this.value)">
+          <button class="btn btn-sm" onclick="saveBotCfg()">💾 Guardar conexión</button>
           <div id="botCfgState" style="font-size:12px;margin-top:6px"></div>
         </div>
-
+      </section>
     </div>
   </main>
 
@@ -1277,7 +1334,7 @@ function renderGastos(){
     } else if(state.config && state.config.botUrl && state.config.botToken){
       gs.textContent="🔄 Conectado a Telegram · Sin movimientos pendientes importados";
     } else {
-      gs.textContent="⚠️ Telegram no conectado · Configura en Más → Sincronización";
+      gs.textContent="⚠️ Telegram no conectado · Configura en Más → Telegram";
     }
   }
 }
@@ -2402,24 +2459,26 @@ function timeAgo(ts){
   return "hace "+Math.floor(s/86400)+" d";
 }
 function renderSyncStatus(){
-  const el=document.getElementById("syncStatus"); if(!el) return;
+  const els=["syncStatus","syncStatusMas"].map(id=>document.getElementById(id)).filter(Boolean);
+  if(!els.length) return;
+  const write=(html,cls)=>els.forEach(el=>{
+    if(String(html).includes("<")) el.innerHTML=html; else el.textContent=html;
+    el.className=cls;
+  });
   const url=(state.config?.botUrl||"").trim();
   const token=(state.config?.botToken||"").trim();
   if(!url||!token){
-    el.textContent="⚠️ Telegram no conectado · Configura en Más → Sincronización";
-    el.className="sync-status warn";
+    write("⚠️ Telegram no conectado · Configura en Más → Telegram","sync-status warn");
     return;
   }
   const last=state.config.lastSync||0;
   const err=state.config.lastSyncError||0;
   if(err && err>last){
-    el.innerHTML='<span>⚠️ Sin conexión con Telegram · Mostrando últimos datos guardados</span><button type="button" class="sync-retry" onclick="retrySync()">🔄 Reintentar</button>';
-    el.className="sync-status warn";
+    write('<span>⚠️ Sin conexión con Telegram · Mostrando últimos datos guardados</span><button type="button" class="sync-retry" onclick="retrySync()">🔄 Reintentar</button>',"sync-status warn");
     return;
   }
-  if(!last){ el.textContent="⏳ Sincronizando…"; el.className="sync-status"; return; }
-  el.textContent="✅ Sincronizado "+timeAgo(last);
-  el.className="sync-status ok";
+  if(!last){ write("⏳ Sincronizando…","sync-status"); return; }
+  write("✅ Sincronizado "+timeAgo(last),"sync-status ok");
 }
 function retrySync(){
   toast("Reintentando conexión…");
