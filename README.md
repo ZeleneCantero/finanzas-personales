@@ -30,9 +30,12 @@ Actívalas una sola vez en "Más → Notificaciones". La app avisa una vez al d�
 El aviso llega por dos vías, sin depender de que la app esté abierta:
 
 - **Web Push (VAPID):** notificación del sistema aunque la PWA esté cerrada. Al tocarla se abre directamente la sección de rendimiento. La clave pública va en la app; la privada es un secreto del Worker (`VAPID_PRIVATE_KEY`). Si ya habías dado permiso, la suscripción se renueva sola al abrir la app.
-- **Telegram:** el bot envía el mismo aviso cada día a las 9:00 (15:00 UTC), **solo al chat de Zelene**. La app sincroniza los saldos al Worker en `/api/sync` y el job usa `artifact:rendimiento`. No se envía a mamá.
+- **Telegram:** el bot envía el mismo aviso cada día a la hora elegida (9:00 por defecto), **solo al chat de Zelene**. La app sincroniza los saldos al Worker en `/api/sync` y el job usa `artifact:rendimiento`. No se envía a mamá.
 
-Hay **un solo guard de "ya avisó hoy"** en el Worker (`/api/aviso`, marca `rendSent:YYYY-MM-DD`): la app lo reclama antes de mostrar su notificación local y el cron de las 9:00 respeta esa marca. Así llega **un solo aviso al día**, sin importar si estás con la app abierta, con Web Push o en Telegram. Si no hay conexión con el bot, la app usa su guard local para no perder el aviso.
+### Hora del aviso
+En "Más → Notificaciones → Hora del aviso diario" eliges la hora (0–23). El selector guarda el valor en el dispositivo y lo envía al Worker con `POST /api/push/hora` (clave `artifact:avisoHora`). El Worker corre una vez por hora (`0 * * * *`) y dispara cuando llega esa hora en México (UTC-6); si se cayó el Worker en ese minuto, recupera el aviso en la siguiente hora. El valor vuelve a la app con `/api/sync`, así que se mantiene entre dispositivos.
+
+Hay **un solo guard de "ya avisó hoy"** en el Worker (`/api/aviso`, marca `rendSent:YYYY-MM-DD`): la app lo reclama antes de mostrar su notificación local y el cron respeta esa marca. Así llega **un solo aviso al día**, sin importar si estás con la app abierta, con Web Push o en Telegram. Si no hay conexión con el bot, la app usa su guard local para no perder el aviso.
 
 ## Funcionamiento offline
 La app funciona sin internet: el HTML se sirve *network-first* y las librerías de gráficas y PDF (`vendor/chart.umd.min.js` y `vendor/jspdf.umd.min.js`) se sirven desde el mismo sitio y se precachean en el service worker (`finanzas-v26`). El SW **nunca** cachea `/api/` ni recursos de otros dominios. Si subes una versión nueva de esas librerías, sube también el número de caché y el `?v=` del registro en `index.html`.

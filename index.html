@@ -522,6 +522,11 @@
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Aviso diario con lo que generó tu dinero, también con la app cerrada. Solo necesitas activarlos una vez.</div>
         <button class="btn btn-ghost btn-sm" onclick="enableNotifications()">Activar notificaciones</button>
         <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="testRendNotification()">🔔 Probar aviso de rendimiento</button>
+        <div style="margin-top:10px">
+          <label style="font-size:11px;color:var(--muted)" for="avisoHora">Hora del aviso diario</label>
+          <select id="avisoHora" onchange="setAvisoHora(this.value)" style="width:100%;margin-top:4px"></select>
+          <div id="avisoHoraStatus" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
+        </div>
         <div id="pushStatus" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
       </div>
       <div class="card">
@@ -2328,6 +2333,15 @@ function applySharedConfigFromBot(s){
     const next=s.rendSemanas.map(x=>Number(x)||0);
     if(JSON.stringify(next)!==JSON.stringify(mm.rendimientoSemanas||[])){ mm.rendimientoSemanas=next; changes++; }
   }
+  if(s.avisoHora!=null){
+    const h=Number(s.avisoHora);
+    if(Number.isInteger(h)&&h>=0&&h<=23){
+      const rawCfg=state.config.avisoHora;
+      const actual=(rawCfg==null||rawCfg==="")?9:Number(rawCfg);
+      const vigente=Number.isInteger(actual)&&actual>=0&&actual<=23?actual:9;
+      if(vigente!==h){ state.config.avisoHora=h; changes++; }
+    }
+  }
   state.config.msiNov2026=true;
   return changes;
 }
@@ -2573,7 +2587,40 @@ function testRendNotification(){
   if(!state.config || !state.config.notificationsEnabled){ toast("Activa las notificaciones primero","warn"); return; }
   toast(notifyRendimiento()?"Notificación enviada":"No se pudo enviar","ok");
 }
+function horaLabel(h){ return String(Number(h)||0).padStart(2,"0")+":00"; }
+function renderAvisoHora(){
+  const sel=document.getElementById("avisoHora"); if(!sel) return;
+  if(!sel.options.length){
+    for(let h=0;h<24;h++){
+      const o=document.createElement("option");
+      o.value=String(h); o.textContent=horaLabel(h); sel.appendChild(o);
+    }
+  }
+  const raw=state.config&&state.config.avisoHora;
+  const cfg=(raw==null||raw==="")?9:Number(raw);
+  const h=Number.isInteger(cfg)&&cfg>=0&&cfg<=23?cfg:9;
+  sel.value=String(h);
+  const st=document.getElementById("avisoHoraStatus");
+  if(st) st.textContent=`Push y Telegram a las ${horaLabel(h)} · Hora de México (UTC-6).`;
+}
+async function setAvisoHora(v){
+  const h=Number(v);
+  if(!Number.isInteger(h)||h<0||h>23) return;
+  if(!state.config) state.config={};
+  state.config.avisoHora=h;
+  saveState();
+  renderAvisoHora();
+  const url=(state.config.botUrl||"").trim().replace(/\/+$/,"");
+  const token=(state.config.botToken||"").trim();
+  if(!url||!token){ toast(`Hora guardada: ${horaLabel(h)}`,"ok"); return; }
+  try{
+    const r=await fetch(url+"/api/push/hora",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({hora:h})});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    toast(`Aviso diario a las ${horaLabel(h)}`,"ok");
+  }catch(e){ toast(`Hora guardada aquí, pero no sincronizada: ${e.message||"red"}`,"warn"); }
+}
 function renderPushStatus(){
+  renderAvisoHora();
   const el=document.getElementById("pushStatus"); if(!el) return;
   const activo=!!(state.config&&state.config.pushEnabled);
   el.innerHTML=activo
