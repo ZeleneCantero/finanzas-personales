@@ -376,50 +376,56 @@
     <div class="tab" id="tab-gastos">
       <div id="alertsBannerGastos"></div>
       <div class="card">
-        <h3>🧾 Mis gastos</h3>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Tus gastos del mes, incluidos los que registras desde Telegram.</div>
-        <div id="gastoState" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
-        <div id="gastoList"></div>
-        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px"><span>💰 Total de mis gastos</span><span id="gastoListTotal">$0</span></div>
-        <button class="btn btn-ghost btn-sm" onclick="openGastoModal()">+ Agregar gasto</button>
-        <button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="importFromBot()">🔄 Actualizar de Telegram</button>
-      </div>
-      <div class="card">
-        <h3>🤝 Deudas con mamá</h3>
-        <div style="display:flex;gap:6px;margin-bottom:8px">
-          <button class="btn btn-ghost btn-sm" id="chipDebo" onclick="setMamaFilter('debo')">🔴 Debo</button>
-          <button class="btn btn-ghost btn-sm" id="chipMeDeben" onclick="setMamaFilter('me_deben')">🟢 Me deben</button>
+        <h3 class="collapse-head" onclick="toggleSec('gMisGastos')">🧾 Mis gastos <span class="caret">▾</span></h3>
+        <div class="collapse-body" data-key="gMisGastos">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Tus gastos del mes, incluidos los que registras desde Telegram.</div>
+          <div id="gastoState" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+          <div id="gastoList"></div>
+          <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px"><span>💰 Total de mis gastos</span><span id="gastoListTotal">$0</span></div>
+          <button class="btn btn-ghost btn-sm" onclick="openGastoModal()">+ Agregar gasto</button>
+          <button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="importFromBot()">🔄 Actualizar de Telegram</button>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Teléfono y tele son pagos fijos: se muestran aparte de lo que le debes.</div>
-        <div id="mamaDebtList"></div>
-        <div class="row"><span id="mamaDebtLbl">🔴 Lo que le debo (movimientos)</span><span id="mamaDebtTotal">$0</span></div>
-        <div class="row" id="mamaExtras"><span>📱 Teléfono y tele (pagos fijos)</span><span id="mamaTelTele">$0</span></div>
-        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px" id="mamaTotalRow"><span>Total con mamá</span><span id="mamaTotalMama">$0</span></div>
       </div>
       <div class="card">
-        <h3>💸 Gasto variable</h3>
-        <div class="grid2" style="margin-bottom:8px">
-          <div class="stat" style="padding:8px">
-            <div class="v" id="varDeudaMama" style="font-size:17px">$0</div>
-            <div class="l">🔴 Lo que le debo a mamá</div>
-            <div id="varNetoMama" style="font-size:11px;color:var(--muted);margin-top:2px">Solo lo que le debes; iPhone y tele van aparte</div>
+        <h3 class="collapse-head" onclick="toggleSec('gMama')">🤝 Deudas con mamá <span class="caret">▾</span></h3>
+        <div class="collapse-body" data-key="gMama">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <button class="btn btn-ghost btn-sm" id="chipDebo" onclick="setMamaFilter('debo')">🔴 Debo</button>
+            <button class="btn btn-ghost btn-sm" id="chipMeDeben" onclick="setMamaFilter('me_deben')">🟢 Me deben</button>
           </div>
-          <div class="stat" style="padding:8px">
-            <div class="v" id="varGastoPersonal" style="font-size:17px">$0</div>
-            <div class="l">🙋 Lo que he gastado (personal)</div>
-          </div>
-        </div>
-        <div class="row"><span>📱 Teléfono y tele (pagos fijos)</span><span id="varTelTele">$0</span></div>
-        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px;margin-top:4px"><span>Total gasto variable</span><span id="varTotal">$0</span></div>
-        <div id="gastoBars"></div>
-        <div class="grid2" style="margin-top:8px">
-          <div><div style="font-size:11px;color:var(--muted)">Presupuesto con mamá</div><input id="budMama" type="number" style="width:100%" onchange="setBudget('mama',this.value)"></div>
-          <div><div style="font-size:11px;color:var(--muted)">Presupuesto mío</div><input id="budYo" type="number" style="width:100%" onchange="setBudget('yo',this.value)"></div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Teléfono y tele son pagos fijos: se muestran aparte de lo que le debes.</div>
+          <div id="mamaDebtList"></div>
+          <div class="row"><span id="mamaDebtLbl">🔴 Lo que le debo (movimientos)</span><span id="mamaDebtTotal">$0</span></div>
+          <div class="row" id="mamaExtras"><span>📱 Teléfono y tele (pagos fijos)</span><span id="mamaTelTele">$0</span></div>
+          <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px" id="mamaTotalRow"><span>Total con mamá</span><span id="mamaTotalMama">$0</span></div>
         </div>
       </div>
       <div class="card">
-        <h3>🏷️ Por categoría</h3>
-        <div id="catSummary"></div>
+        <h3 class="collapse-head" onclick="toggleSec('gVariable')">💸 Gasto variable <span class="caret">▾</span></h3>
+        <div class="collapse-body" data-key="gVariable">
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="stat" style="padding:8px">
+              <div class="v" id="varDeudaMama" style="font-size:17px">$0</div>
+              <div class="l">🔴 Lo que le debo a mamá</div>
+              <div id="varNetoMama" style="font-size:11px;color:var(--muted);margin-top:2px">Solo lo que le debes; iPhone y tele van aparte</div>
+            </div>
+            <div class="stat" style="padding:8px">
+              <div class="v" id="varGastoPersonal" style="font-size:17px">$0</div>
+              <div class="l">🙋 Lo que he gastado (personal)</div>
+            </div>
+          </div>
+          <div class="row"><span>📱 Teléfono y tele (pagos fijos)</span><span id="varTelTele">$0</span></div>
+          <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:6px;margin-top:4px"><span>Total gasto variable</span><span id="varTotal">$0</span></div>
+          <div id="gastoBars"></div>
+          <div class="grid2" style="margin-top:8px">
+            <div><div style="font-size:11px;color:var(--muted)">Presupuesto con mamá</div><input id="budMama" type="number" style="width:100%" onchange="setBudget('mama',this.value)"></div>
+            <div><div style="font-size:11px;color:var(--muted)">Presupuesto mío</div><input id="budYo" type="number" style="width:100%" onchange="setBudget('yo',this.value)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="collapse-head" onclick="toggleSec('gCategorias')">🏷️ Por categoría <span class="caret">▾</span></h3>
+        <div class="collapse-body" data-key="gCategorias"><div id="catSummary"></div></div>
       </div>
 
     </div>
@@ -952,16 +958,22 @@ function cancelUndoBot(key){ if(undoBotTimers[key]){ clearTimeout(undoBotTimers[
 
 // ---------- RENDER ----------
 function renderAll(){ applyCollapsed(); renderMonthCalendars(); renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderCuentasMama(); renderInversion(); renderRendim(); renderSimulacion(); renderMeta(); renderMas(); renderAlerts(); }
-function toggleSec(key){
+// Estado de desplegables compartido por Deudas y Gastos (migra el guard viejo).
+function collapsedStore(){
   if(!state.config) state.config={};
-  if(!state.config.deudasCollapsed) state.config.deudasCollapsed={};
-  state.config.deudasCollapsed[key]=!state.config.deudasCollapsed[key];
+  if(!state.config.collapsed) state.config.collapsed={...(state.config.deudasCollapsed||{})};
+  return state.config.collapsed;
+}
+function toggleSec(key){
+  const s=collapsedStore();
+  s[key]=!s[key];
   saveState(); applyCollapsed();
 }
 function applyCollapsed(){
+  const s=collapsedStore();
   document.querySelectorAll(".collapse-body").forEach(b=>{
     const key=b.getAttribute("data-key");
-    const col=!!(state.config && state.config.deudasCollapsed && state.config.deudasCollapsed[key]);
+    const col=!!s[key];
     b.classList.toggle("collapsed",col);
     const head=b.previousElementSibling;
     const caret=head&&head.querySelector?head.querySelector(".caret"):null;
