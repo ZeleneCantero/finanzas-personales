@@ -470,11 +470,10 @@
       <div class="card">
         <h3>⚙️ Saldos para calcular la tasa</h3>
         <div class="grid2">
-          <input id="saldoAyer" type="number" inputmode="decimal" step="0.01" placeholder="Saldo de ayer" onchange="setRendSaldos()">
-          <input id="saldoHoy" type="number" inputmode="decimal" step="0.01" placeholder="Saldo de hoy" onchange="setRendSaldos()">
+          <div class="stat"><div class="v" id="rendSaldoAyer" style="font-size:16px">$0</div><div class="l">Saldo de ayer</div></div>
+          <div class="stat"><div class="v" id="rendSaldoHoy" style="font-size:16px">$0</div><div class="l">Saldo de hoy (con el nuevo rendimiento)</div></div>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-top:6px" id="rendTasaInfo"></div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="usarHoyComoAyer()">🔄 El saldo de hoy pasa a ser el de ayer</button>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px" id="rendTasaInfo"></div>
       </div>
       <div class="card">
         <h3>🗓️ Elige un mes</h3>
@@ -1400,8 +1399,8 @@ function renderRendim(){
   const {ayer,hoy,fecha}=rendSaldos();
   const tasa=rendTasa();
   const setE=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
-  const sa=document.getElementById("saldoAyer"); if(sa) sa.value=ayer;
-  const sh=document.getElementById("saldoHoy"); if(sh) sh.value=hoy;
+  const sa=document.getElementById("rendSaldoAyer"); if(sa) sa.textContent="$"+fmt(ayer);
+  const sh=document.getElementById("rendSaldoHoy"); if(sh) sh.textContent="$"+fmt(hoy);
   const ti=document.getElementById("rendTasaInfo");
   if(ti) ti.textContent=`Tasa diaria: ${(tasa*100).toFixed(6)}% · Ganancia de ayer a hoy: $${fmt(hoy-ayer)} · Desde ${fecha} · Interés compuesto`;
 
@@ -1825,25 +1824,6 @@ function recalibrarSaldoTotal(objetivo){
   if(!state.config) state.config={};
   const actual=totalSaved();
   state.config.savedBase=Math.round(((Number(state.config.savedBase)||0)+(Number(objetivo)-actual))*100)/100;
-}
-function setRendSaldos(){
-  const a=parseFloat(document.getElementById("saldoAyer")?.value);
-  const h=parseFloat(document.getElementById("saldoHoy")?.value);
-  if(!(a>0)||!(h>0)){ toast("Captura ambos saldos","warn"); renderRendim(); return; }
-  if(!state.config) state.config={};
-  state.config.saldoAyer=a;
-  state.config.saldoHoy=h;
-  state.config.rendFecha=todayKey();
-  recalibrarSaldoTotal(h);
-  saveState(); renderAll(); toast("Tasa actualizada","ok");
-}
-function usarHoyComoAyer(){
-  const h=parseFloat(document.getElementById("saldoHoy")?.value);
-  if(!(h>0)){ toast("Captura el saldo de hoy","warn"); return; }
-  document.getElementById("saldoAyer").value=h;
-  document.getElementById("saldoHoy").value="";
-  document.getElementById("saldoHoy").focus();
-  toast("Ahora captura el nuevo saldo de hoy","ok");
 }
 function saveSemanas(){
   const m=invSelMonth();
