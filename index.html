@@ -376,6 +376,15 @@
     <div class="tab" id="tab-gastos">
       <div id="alertsBannerGastos"></div>
       <div class="card">
+        <h3>🧾 Mis gastos</h3>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Tus gastos del mes, incluidos los que registras desde Telegram.</div>
+        <div id="gastoState" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+        <div id="gastoList"></div>
+        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px"><span>💰 Total de mis gastos</span><span id="gastoListTotal">$0</span></div>
+        <button class="btn btn-ghost btn-sm" onclick="openGastoModal()">+ Agregar gasto</button>
+        <button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="importFromBot()">🔄 Actualizar de Telegram</button>
+      </div>
+      <div class="card">
         <h3>🤝 Deudas con mamá</h3>
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <button class="btn btn-ghost btn-sm" id="chipDebo" onclick="setMamaFilter('debo')">🔴 Debo</button>
@@ -407,14 +416,6 @@
           <div><div style="font-size:11px;color:var(--muted)">Presupuesto con mamá</div><input id="budMama" type="number" style="width:100%" onchange="setBudget('mama',this.value)"></div>
           <div><div style="font-size:11px;color:var(--muted)">Presupuesto mío</div><input id="budYo" type="number" style="width:100%" onchange="setBudget('yo',this.value)"></div>
         </div>
-      </div>
-      <div class="card">
-        <h3>📝 Movimientos</h3>
-        <div id="gastoState" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
-        <div id="gastoList"></div>
-        <div class="row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px"><span>💰 Total de movimientos</span><span id="gastoListTotal">$0</span></div>
-        <button class="btn btn-ghost btn-sm" onclick="openGastoModal()">+ Agregar gasto</button>
-        <button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="importFromBot()">🔄 Actualizar de Telegram</button>
       </div>
       <div class="card">
         <h3>🏷️ Por categoría</h3>
@@ -1329,7 +1330,7 @@ function renderGastos(){
   if(gs){
     const tgCount=tgDeudas().length;
     if(tgCount){
-      gs.textContent=`🔄 ${tgCount} movimiento(s) vienen de Telegram · Se actualizan solos`;
+      gs.textContent=`🔄 ${tgCount} gasto(s) vienen de Telegram · Se actualizan solos`;
     } else if(state.config && state.config.botUrl && state.config.botToken){
       gs.textContent="🔄 Conectado a Telegram · Sin movimientos pendientes importados";
     } else {
