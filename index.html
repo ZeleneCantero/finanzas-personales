@@ -1726,24 +1726,64 @@ function delGasto(id,who){
 }
 
 // Gasto personal registrado con /gasto en Telegram.
+function marcarBorradoPendiente(id){
+  if(!state.config) state.config={};
+  if(!Array.isArray(state.config.tgPendingDelete)) state.config.tgPendingDelete=[];
+  if(!state.config.tgPendingDelete.includes(id)) state.config.tgPendingDelete.push(id);
+  saveState();
+}
+function quitarBorradoPendiente(id){
+  if(!state.config||!Array.isArray(state.config.tgPendingDelete)) return;
+  state.config.tgPendingDelete=state.config.tgPendingDelete.filter(x=>x!==id);
+  saveState();
+}
 async function delGastoTelegram(id){
   const idx=(state.tgGastos||[]).findIndex(x=>x.id===id); if(idx<0) return;
   const g=state.tgGastos[idx];
+  // Ignorar el id en la reconciliación para que una sincronización en curso
+  // no vuelva a traer el gasto que acabamos de borrar.
+  if(!state.config) state.config={};
+  if(!Array.isArray(state.config.tgIgnored)) state.config.tgIgnored=[];
+  if(g.tgId && !state.config.tgIgnored.includes(g.tgId)) state.config.tgIgnored.push(g.tgId);
   state.tgGastos.splice(idx,1);
   saveState(); renderAll();
-  if(g.tgId) scheduleUndoBot("gasto:"+g.tgId,()=>borrarGastoEnBot(g.tgId));
+  // Borrado inmediato en el bot: un temporizador se pierde si cierras la pestaña.
+  await borrarGastoEnBot(g.tgId);
   toastUndo("Eliminado: "+g.desc,()=>{
     state.tgGastos.splice(idx,0,g);
-    cancelUndoBot("gasto:"+g.tgId);
+    if(g.tgId){
+      state.config.tgIgnored=state.config.tgIgnored.filter(x=>x!==g.tgId);
+      quitarBorradoPendiente(g.tgId);
+    }
+    restaurarGastoEnBot(g);
     saveState(); renderAll(); toast("Restaurado","ok");
   });
 }
 async function borrarGastoEnBot(tgId){
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,"");
   const token=(state.config?.botToken||"").trim();
-  if(!url||!token||!tgId) return;
-  try{ await fetch(url+"/api/gastos/delete",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({id:tgId})}); }
-  catch(e){ console.warn("No se pudo borrar el gasto en el bot",e); }
+  if(!url||!token||!tgId) return false;
+  try{
+    const r=await fetch(url+"/api/gastos/delete",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({id:tgId})});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    quitarBorradoPendiente(tgId);
+    return true;
+  }catch(e){
+    marcarBorradoPendiente(tgId);
+    console.warn("No se pudo borrar el gasto en el bot; se reintentará al sincronizar",e);
+    return false;
+  }
+}
+function flushBorradosPendientes(){
+  const ids=(state.config?.tgPendingDelete||[]).slice();
+  ids.forEach(id=>{ borrarGastoEnBot(id); });
+}
+function restaurarGastoEnBot(g){
+  const url=(state.config?.botUrl||"").trim().replace(/\/+$/,"");
+  const token=(state.config?.botToken||"").trim();
+  if(!url||!token||!g||!g.tgId) return;
+  fetch(url+"/api/gastos/restore",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify({gasto:{id:g.tgId,amount:Number(g.monto)||0,desc:g.desc||"Gasto",date:g.fecha||new Date().toISOString()}})})
+    .catch(e=>console.warn("No se pudo restaurar el gasto en el bot",e));
 }
 
 // Borra el movimiento en el bot para que las cuentas sigan cuadrando.
@@ -2313,8 +2353,9 @@ function reconcileGastos(list){
   for(let i=state.tgGastos.length-1;i>=0;i--){
     if(!byId.has(state.tgGastos[i].tgId)){ state.tgGastos.splice(i,1); removed++; }
   }
-  // actualizar los existentes y agregar los nuevos
+  // actualizar los existentes y agregar los nuevos (omitir borrados desde la app)
   arr.forEach(g=>{
+    if(isIgnored(g.id)) return;
     const monto=Number(g.amount)||0;
     const fecha=(g.date||"").slice(0,10);
     const desc=g.desc||"Gasto";
@@ -2386,6 +2427,8 @@ function applySharedConfigFromBot(s){
 async function importFromBot(silent){
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,""); const token=(state.config?.botToken||"").trim();
   if(!url||!token){ if(!silent) toast("Falta URL o token","warn"); return; }
+  // Reintentar borrados que no llegaron al bot (sin conexión, por ejemplo).
+  flushBorradosPendientes();
   try{
     const [lr,gr,sr]=await Promise.all([
       fetch(url+"/api/ledger?t="+Date.now(),{headers:{"X-Auth-Token":token}}),
