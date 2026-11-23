@@ -28,6 +28,8 @@
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
   .app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+  .demo-banner{display:none;background:#0f766e;color:#fff;text-align:center;font-size:12px;font-weight:700;padding:7px 10px;letter-spacing:.2px}
+  .demo-banner a{color:#fff;text-decoration:underline;margin-left:8px}
   header{background:linear-gradient(135deg,var(--pink),#a855f7 55%,var(--blue));color:#fff;padding:12px 16px;box-shadow:0 2px 12px rgba(139,92,246,.28)}
   header .title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
   header .sub{font-size:12px;opacity:.9;margin-top:2px}
@@ -217,6 +219,7 @@
 </head>
 <body>
 <div class="app">
+  <div class="demo-banner" id="demoBanner">🧪 Modo demo · datos de prueba <a href="./">Salir</a></div>
   <header>
     <div class="title">🪼 Finanzas <span style="font-size:12px;opacity:.8">· Primer millón 🐳</span></div>
     <div class="sub" id="headerSub">Cargando...</div>
@@ -640,8 +643,21 @@
 
 <script>
 // ---------- DATA MODEL ----------
-const STORAGE_KEY = "finanzas_v1";
+// Modo demo: ?demo=1 usa un almacén separado y NUNCA toca los datos reales
+// ni envía nada al bot de Telegram.
+const DEMO = new URLSearchParams(location.search).has("demo");
+const STORAGE_KEY = DEMO ? "finanzas_demo_v1" : "finanzas_v1";
 const META = 1000000;
+if(DEMO){
+  const banner=document.getElementById("demoBanner");
+  if(banner) banner.style.display="block";
+  document.title="Finanzas Demo 🐳";
+}
+function demoBloqueado(){
+  if(!DEMO) return false;
+  toast("Modo demo: sin conexión con Telegram","warn");
+  return true;
+}
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function fmt(n){ const v=Number(n)||0; return v.toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -775,6 +791,8 @@ function loadState(){
   return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:505472.30,deudaFilter:"pendientes",saldoAyer:505353.27,saldoHoy:505472.30,rendFecha:"2026-11-22"}, user:{name:"Yosseline"} };
 }
 function saveState(){
+  // En demo nada se persiste: cada visita empieza limpia con los datos de prueba.
+  if(DEMO) return;
   // El token nunca se guarda en claro dentro del estado ni en los respaldos.
   const copia=JSON.parse(JSON.stringify(state));
   if(copia.config) delete copia.config.botToken;
@@ -1790,6 +1808,7 @@ async function delGastoTelegram(id){
   });
 }
 async function borrarGastoEnBot(tgId){
+  if(DEMO) return false;
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,"");
   const token=(state.config?.botToken||"").trim();
   if(!url||!token||!tgId) return false;
@@ -1805,10 +1824,12 @@ async function borrarGastoEnBot(tgId){
   }
 }
 function flushBorradosPendientes(){
+  if(DEMO) return;
   const ids=(state.config?.tgPendingDelete||[]).slice();
   ids.forEach(id=>{ borrarGastoEnBot(id); });
 }
 function restaurarGastoEnBot(g){
+  if(DEMO) return;
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,"");
   const token=(state.config?.botToken||"").trim();
   if(!url||!token||!g||!g.tgId) return;
@@ -1818,6 +1839,7 @@ function restaurarGastoEnBot(g){
 
 // Borra el movimiento en el bot para que las cuentas sigan cuadrando.
 async function borrarEnBot(tgId){
+  if(DEMO) return false;
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,"");
   const token=(state.config?.botToken||"").trim();
   if(!url||!token||!tgId) return;
@@ -2041,6 +2063,7 @@ function exportCSV(){
   const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="gastos-"+m.id+".csv"; a.click(); URL.revokeObjectURL(url); toast("CSV descargado");
 }
 function importData(e){
+  if(demoBloqueado()) { e.target.value=""; return; }
   const file=e.target.files[0]; if(!file) return;
   const r=new FileReader();
   r.onload=async ev=>{
@@ -2148,10 +2171,11 @@ function pdfMama(){
 // bot sync
 // La conexión se guarda de forma permanente: el token se cifra en este
 // dispositivo (AES-GCM) y nunca se escribe en claro en el estado ni en backups.
-const CFG_KEY="finanzas_cfg_v2";
-const CFG_KEY_ID="finanzas_cfg_key_v2";
+const CFG_KEY=DEMO?"finanzas_demo_cfg_v2":"finanzas_cfg_v2";
+const CFG_KEY_ID=DEMO?"finanzas_demo_cfg_key_v2":"finanzas_cfg_key_v2";
 let cfgKeyPromise=null;
 function cfgKey(){
+  if(DEMO) return Promise.resolve(null);
   if(cfgKeyPromise) return cfgKeyPromise;
   cfgKeyPromise=(async()=>{
     try{
@@ -2167,11 +2191,13 @@ function cfgKey(){
 const b64u=a=>btoa(String.fromCharCode.apply(null,a));
 const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 function loadCfg(){
+  if(DEMO) return null;
   try{ const raw=localStorage.getItem(CFG_KEY); if(raw){ const c=JSON.parse(raw); if(c&&c.botUrl) return c; } }catch(e){}
   try{ const old=localStorage.getItem("finanzas_cfg_v1"); if(old){ const c=JSON.parse(old); if(c&&c.botUrl) return c; } }catch(e){}
   return null;
 }
 async function saveCfg(){
+  if(DEMO) return;
   const url=(state.config&&state.config.botUrl)||"";
   const token=(state.config&&state.config.botToken)||"";
   try{
@@ -2188,6 +2214,7 @@ async function saveCfg(){
   try{ localStorage.removeItem("finanzas_cfg_v1"); }catch(e){}
 }
 async function restoreBotCfg(){
+  if(DEMO) return;
   const c=loadCfg(); if(!c) return;
   if(!state.config) state.config={};
   if(c.botUrl && !state.config.botUrl) state.config.botUrl=c.botUrl;
@@ -2212,6 +2239,7 @@ function decodeSetupBlob(blob){
   return JSON.parse(s);
 }
 function applyEmbeddedSetup(){
+  if(DEMO) return;
   if(state.config && state.config.botUrl && state.config.botToken) return;
   try{
     const c=decodeSetupBlob(SETUP_OBFUSC);
@@ -2234,6 +2262,7 @@ function setBotToken(v,quiet){
 }
 // Pega el enlace personal (?setup=…) desde dentro de la PWA.
 function applySetupLink(){
+  if(demoBloqueado()) return;
   const el=document.getElementById("setupLinkInput");
   const raw=((el&&el.value)||"").trim();
   if(!raw){ toast("Pega el enlace primero"); return; }
@@ -2278,6 +2307,7 @@ function syncMonth(){
 }
 
 async function syncToBot(silent){
+  if(DEMO) return false;
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,""); const token=(state.config?.botToken||"").trim();
   if(!url||!token){ if(!silent) toast("Falta URL o token","warn"); return; }
   const m=syncMonth();
@@ -2455,6 +2485,7 @@ function applySharedConfigFromBot(s){
 }
 
 async function importFromBot(silent){
+  if(DEMO) return;
   const url=(state.config?.botUrl||"").trim().replace(/\/+$/,""); const token=(state.config?.botToken||"").trim();
   if(!url||!token){ if(!silent) toast("Falta URL o token","warn"); return; }
   // Reintentar borrados que no llegaron al bot (sin conexión, por ejemplo).
@@ -2518,6 +2549,7 @@ function renderSyncStatus(){
     if(String(html).includes("<")) el.innerHTML=html; else el.textContent=html;
     el.className=cls;
   });
+  if(DEMO){ write("🧪 Modo demo · sin conexión con Telegram","sync-status warn"); return; }
   const url=(state.config?.botUrl||"").trim();
   const token=(state.config?.botToken||"").trim();
   if(!url||!token){
@@ -2635,6 +2667,7 @@ function urlB64ToUint8Array(s){
   return out;
 }
 async function enablePush(silent){
+  if(DEMO) return false;
   if(!("serviceWorker" in navigator)||!("PushManager" in window)){
     if(!silent) toast("Este navegador no soporta push","warn");
     return false;
@@ -2666,6 +2699,7 @@ async function enablePush(silent){
   }
 }
 async function enableNotifications(){
+  if(demoBloqueado()) return;
   if(!("Notification" in window)){ toast("Tu navegador no soporta notificaciones"); return; }
   const perm = await Notification.requestPermission();
   if(perm==="granted"){
@@ -2682,6 +2716,7 @@ async function enableNotifications(){
   }
 }
 function notify(title,body){
+  if(DEMO) return false;
   if(!state.config || !state.config.notificationsEnabled) return false;
   if(typeof Notification==="undefined" || Notification.permission!=="granted") return false;
   try { new Notification(title,{body,icon:"icon.svg"}); return true; } catch(e){ return false; }
@@ -2696,6 +2731,7 @@ function notifyRendimiento(){
   return notify("💰 Rendimiento de hoy",`Hoy generaste $${fmt(monto)}. Tasa diaria ${(rendTasa()*100).toFixed(6)}% · Saldo $${fmt(rendSaldos().hoy)}. Anual estimado: ${rendAnualPct().toFixed(2)}%.`);
 }
 async function testRendNotification(){
+  if(demoBloqueado()) return;
   const cfg=state.config||{};
   const url=(cfg.botUrl||"").trim().replace(/\/+$/,"");
   const token=(cfg.botToken||"").trim();
@@ -2734,6 +2770,7 @@ async function setAvisoHora(v){
   state.config.avisoHora=h;
   saveState();
   renderAvisoHora();
+  if(DEMO){ toast(`Hora de prueba: ${horaLabel(h)}`,"ok"); return; }
   const url=(state.config.botUrl||"").trim().replace(/\/+$/,"");
   const token=(state.config.botToken||"").trim();
   if(!url||!token){ toast(`Hora guardada: ${horaLabel(h)}`,"ok"); return; }
@@ -2746,6 +2783,11 @@ async function setAvisoHora(v){
 function renderPushStatus(){
   renderAvisoHora();
   const el=document.getElementById("pushStatus"); if(!el) return;
+  if(DEMO){
+    el.textContent="Modo demo: notificaciones desactivadas.";
+    el.style.color="var(--muted)";
+    return;
+  }
   const activo=!!(state.config&&state.config.pushEnabled);
   el.innerHTML=activo
     ? '✅ Avisos activos: te llegarán aunque cierres la app.'
@@ -2755,6 +2797,7 @@ function renderPushStatus(){
 // Guard compartido con el bot: el primero que avisa reclama el día.
 // Si no hay conexión, se usa solo el guard local para no perder el aviso.
 async function avisoBot(action,hoy){
+  if(DEMO) return {ok:true,claimed:true};
   const cfg=state.config||{};
   const url=(cfg.botUrl||"").trim().replace(/\/+$/,"");
   const token=(cfg.botToken||"").trim();
@@ -2766,6 +2809,7 @@ async function avisoBot(action,hoy){
   }catch(e){ return {ok:false,claimed:true}; }
 }
 async function checkNotifications(){
+  if(DEMO) return;
   const now=new Date();
   if(!state.config) state.config={};
   // día 13: mes nuevo y MSI avanzados
@@ -2806,7 +2850,7 @@ function init(){
   try{
     const q=new URLSearchParams(location.search);
     const setup=q.get("setup");
-    if(setup){
+    if(setup && !DEMO){
       const cfg=JSON.parse(atob(setup));
       if(cfg.botUrl){
         state.config=state.config||{};
@@ -2931,6 +2975,7 @@ function init(){
     if(h && document.querySelector(`.navbtn[data-tab="${h}"]`)) showTab(h);
   }catch(e){}
   renderPushStatus();
+  if(DEMO) return; // el demo no sincroniza, no notifica y no registra listeners del bot
   checkNotifications();
   // auto-sync with Telegram if configured (tras recuperar el token cifrado)
   restoreBotCfg().then(()=>{
@@ -2960,7 +3005,7 @@ function init(){
   setInterval(()=>{ if(document.visibilityState==="visible") checkNotifications(); },60000);
 }
 init();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw-v2.js?v=26").catch(()=>{}); }
+if("serviceWorker" in navigator && !DEMO){ navigator.serviceWorker.register("sw-v2.js?v=26").catch(()=>{}); }
 </script>
 </body>
 </html>
