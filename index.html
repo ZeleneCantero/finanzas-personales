@@ -839,23 +839,40 @@ function normalizarInv(inv){
   return {q1:0,q2:Math.round((q1+q2)*100)/100,rendimiento:Number(inv&&inv.rendimiento)||0};
 }
 // ---------- RENDIMIENTO (tasa derivada de saldo ayer/hoy, compuesta al día) ----------
-// El banco genera hoy la diferencia entre el saldo de ayer y el de hoy.
-// Esa diferencia define la tasa diaria; a partir de ahí se proyecta día a día
-// con interés compuesto y se agrupa por semanas y por mes.
-const SALDO_AYER_PREDET=505115.66, SALDO_HOY_PREDET=505234.25;
-function rendSaldos(){
+// Guardamos la última observación real (saldo de ayer, saldo de hoy y su fecha).
+// Los saldos mostrados se derivan de ahí con interés compuesto, así que "ayer" y
+// "hoy" avanzan solos cada día sin volver a capturarlos.
+const SALDO_AYER_PREDET=505353.27, SALDO_HOY_PREDET=505472.30, REND_FECHA_PREDET="2026-11-22";
+function rendBase(){
   const c=state.config||{};
   const ayer=Number(c.saldoAyer)>0?Number(c.saldoAyer):SALDO_AYER_PREDET;
   const hoy=Number(c.saldoHoy)>0?Number(c.saldoHoy):SALDO_HOY_PREDET;
-  const fecha=c.rendFecha||todayKey();
+  const fecha=c.rendFecha||REND_FECHA_PREDET;
   return {ayer,hoy,fecha};
 }
-function rendTasa(){
-  const {ayer,hoy}=rendSaldos();
-  return ayer>0?(hoy/ayer-1):0;
+function diasEntreClaves(a,b){
+  const da=new Date(String(a)+"T00:00:00"), db=new Date(String(b)+"T00:00:00");
+  if(isNaN(da.getTime())||isNaN(db.getTime())) return 0;
+  return Math.round((db-da)/86400000);
 }
-function rendObsMes(){ return (rendSaldos().fecha||"").slice(0,7); }
-function rendObsDia(){ return parseInt((rendSaldos().fecha||"").split("-")[2],10)||1; }
+function rendTasa(){
+  const b=rendBase();
+  return b.ayer>0?(b.hoy/b.ayer-1):0;
+}
+// Saldos vigentes hasta hoy. `fecha` sigue siendo la de observación para no
+// mover el marcador "Real" del detalle día a día.
+function rendSaldos(){
+  const b=rendBase(), n=Math.max(0,diasEntreClaves(b.fecha,todayKey())), tasa=rendTasa();
+  const red=x=>Math.round(x*100)/100;
+  if(n<=0) return {ayer:b.ayer,hoy:b.hoy,fecha:b.fecha};
+  return {
+    ayer: n===1?b.hoy:red(b.hoy*Math.pow(1+tasa,n-1)),
+    hoy: red(b.hoy*Math.pow(1+tasa,n)),
+    fecha: b.fecha
+  };
+}
+function rendObsMes(){ return (rendBase().fecha||"").slice(0,7); }
+function rendObsDia(){ return parseInt((rendBase().fecha||"").split("-")[2],10)||1; }
 // Serie de rendimiento por día del mes. Los meses anteriores al día en que
 // capturamos los saldos conservan su valor histórico (repartido desde semanas).
 function rendSerieDias(m){
@@ -870,7 +887,7 @@ function rendSerieDias(m){
     }
     return arr;
   }
-  const {ayer,hoy}=rendSaldos(), tasa=rendTasa();
+  const {ayer,hoy}=rendBase(), tasa=rendTasa();
   const gananciaReal=Math.round((hoy-ayer)*100)/100;
   let saldo=hoy;
   if(m.id===obsMes && obsDia>=1 && obsDia<=dim) arr[obsDia-1]=gananciaReal;
@@ -2268,7 +2285,7 @@ async function syncToBot(silent){
   try{
     // No enviar arrays vacíos: un dispositivo nuevo aún no importó el KV y
     // podría borrar los datos compartidos.
-    const rend=rendSaldos(), hoyDia=rendNotificacionHoy();
+    const rend=rendBase(), hoyDia=rendNotificacionHoy();
     const payload={summary,msiMonth:m.id,gasto:m.gasto,gastoMama:m.gasto.mama.budget,
       saldoAyer:rend.ayer,saldoHoy:rend.hoy,rendFecha:rend.fecha,tasaDiaria:rendTasa(),rendDiarioHoy:hoyDia};
     if(Array.isArray(m.deudaMama)&&m.deudaMama.length) payload.mamaAccount=m.deudaMama;
