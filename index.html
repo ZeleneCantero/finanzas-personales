@@ -772,7 +772,7 @@ function loadState(){
     const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){ const s=JSON.parse(raw); if(s && s.months) return s; }
   }catch(e){}
-  return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:505115.66,deudaFilter:"pendientes",saldoAyer:505115.66,saldoHoy:505234.25,rendFecha:"2026-11-20"}, user:{name:"Yosseline"} };
+  return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:505472.30,deudaFilter:"pendientes",saldoAyer:505353.27,saldoHoy:505472.30,rendFecha:"2026-11-22"}, user:{name:"Yosseline"} };
 }
 function saveState(){
   // El token nunca se guarda en claro dentro del estado ni en los respaldos.
@@ -2894,10 +2894,20 @@ function init(){
   if(!state.config.rendCompuestoMigrado){
     if(!(Number(state.config.saldoAyer)>0)) state.config.saldoAyer=SALDO_AYER_PREDET;
     if(!(Number(state.config.saldoHoy)>0)) state.config.saldoHoy=SALDO_HOY_PREDET;
-    if(!state.config.rendFecha) state.config.rendFecha="2026-11-20";
+    if(!state.config.rendFecha) state.config.rendFecha=REND_FECHA_PREDET;
     state.months.forEach(m=>{ if(m.inversion) m.inversion.rendimiento=rendMensual(m); });
     recalibrarSaldoTotal(state.config.saldoHoy);
     state.config.rendCompuestoMigrado=true;
+  }
+  // Observación real del 22/11/2026: reemplaza los saldos viejos del 20/11.
+  // A partir de aquí la app proyecta el saldo de cada día con la tasa derivada.
+  if(!state.config.rendBaseNov22){
+    state.config.saldoAyer=SALDO_AYER_PREDET;
+    state.config.saldoHoy=SALDO_HOY_PREDET;
+    state.config.rendFecha=REND_FECHA_PREDET;
+    state.months.forEach(m=>{ if(m.inversion) m.inversion.rendimiento=rendMensual(m); });
+    recalibrarSaldoTotal(SALDO_HOY_PREDET);
+    state.config.rendBaseNov22=true;
   }
   saveState();
   renderAll();
