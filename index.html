@@ -782,8 +782,117 @@ function seedMonths(){
   return months;
 }
 
+// ---------- DATOS FICTICIOS (SOLO DEMO) ----------
+// Se generan en memoria para el mes en curso; nunca se escriben en localStorage
+// y el modo real sigue leyendo finanzas_v1 con sus datos intactos.
+function demoRendTotal(t,ayer,hoy,dim){
+  let saldo=hoy, sum=Math.round((hoy-ayer)*100)/100;
+  for(let d=2;d<=dim;d++){
+    const g=Math.round(saldo*t*100)/100;
+    sum+=g; saldo=Math.round((saldo+g)*100)/100;
+  }
+  return Math.round(sum*100)/100;
+}
+// Ajusta el saldo de ayer para que el mes de observación rinda $25,000 exactos.
+function demoCalibrarAyer(hoy,dim,objetivo){
+  const totalDe=t=>demoRendTotal(t,hoy/(1+t),hoy,dim);
+  let lo=0, hi=0.01;
+  for(let i=0;i<90;i++){ const mid=(lo+hi)/2; if(totalDe(mid)<objetivo) lo=mid; else hi=mid; }
+  const centro=Math.round(hoy/(1+(lo+hi)/2)*100);
+  for(let c=centro-400;c<=centro+400;c++){
+    const ayer=c/100;
+    if(Math.abs(demoRendTotal(hoy/ayer-1,ayer,hoy,dim)-objetivo)<0.001) return ayer;
+  }
+  return Math.round(hoy/(1+(lo+hi)/2)*100)/100;
+}
+function demoSemanas(dim,total){
+  const n=Math.ceil(dim/7), arr=Array(n).fill(Math.floor(total/n*100)/100);
+  arr[n-1]=Math.round((total-arr.slice(0,-1).reduce((s,x)=>s+x,0))*100)/100;
+  return arr;
+}
+function demoMonth(k,cfg){
+  const m=defaultMonth(k);
+  m.apoyo=5000;
+  m.msi=cfg.msi.map(x=>Object.assign({id:"demo-"+uid()},x));
+  m.deudaMama=cfg.deudaMama.map(x=>Object.assign({id:"demo-"+uid()},x));
+  m.gasto.mama={budget:3000,spent:0,items:cfg.gasto.mama.map(x=>Object.assign({id:"demo-"+uid()},x))};
+  m.gasto.yo={budget:1000,spent:0,items:cfg.gasto.yo.map(x=>Object.assign({id:"demo-"+uid()},x))};
+  m.inversion={q1:cfg.q1,q2:cfg.q2,rendimiento:25000};
+  m.rendimientoSemanas=demoSemanas(daysInMonth(k),25000);
+  return m;
+}
+function demoSeedState(){
+  const hoy=new Date(), k=monthKey(hoy);
+  const prev=n=>monthKey(new Date(hoy.getFullYear(),hoy.getMonth()-n,1));
+  const saldoHoyDemo=499999, saldoAyerDemo=demoCalibrarAyer(saldoHoyDemo,daysInMonth(k),25000);
+  const months=[
+    demoMonth(prev(2),{
+      q1:20000,q2:10000,
+      msi:[
+        {tarjeta:"Tarjeta Demo",desc:"Laptop de prueba",monto:1200,total:12,pago:3},
+        {tarjeta:"Tarjeta Demo",desc:"Audífonos fake",monto:300,total:6,pago:4},
+        {tarjeta:"Banco Falso",desc:"Vuelo imaginario",monto:2500,total:5,pago:5,liquidado:true}
+      ],
+      deudaMama:[
+        {desc:"Tablet de prueba",monto:800,total:10,pago:5},
+        {desc:"Teléfono demo",monto:600,total:8,pago:8,liquidado:true}
+      ],
+      gasto:{
+        mama:[{fecha:prev(2)+"-10",desc:"Cena de prueba",monto:450},{fecha:prev(2)+"-18",desc:"Supermercado demo",monto:780}],
+        yo:[{fecha:prev(2)+"-12",desc:"Café de prueba",monto:120},{fecha:prev(2)+"-21",desc:"Transporte demo",monto:260}]
+      }
+    }),
+    demoMonth(prev(1),{
+      q1:22000,q2:12000,
+      msi:[
+        {tarjeta:"Tarjeta Demo",desc:"Laptop de prueba",monto:1200,total:12,pago:4},
+        {tarjeta:"Tarjeta Demo",desc:"Audífonos fake",monto:300,total:6,pago:5},
+        {tarjeta:"Banco Falso",desc:"Vuelo imaginario",monto:2500,total:5,pago:5,liquidado:true}
+      ],
+      deudaMama:[
+        {desc:"Tablet de prueba",monto:800,total:10,pago:6},
+        {desc:"Teléfono demo",monto:600,total:8,pago:8,liquidado:true}
+      ],
+      gasto:{
+        mama:[{fecha:prev(1)+"-09",desc:"Cena de prueba",monto:520},{fecha:prev(1)+"-22",desc:"Regalo demo",monto:900}],
+        yo:[{fecha:prev(1)+"-14",desc:"Libros de prueba",monto:340}]
+      }
+    }),
+    demoMonth(k,{
+      q1:24000,q2:14000,
+      msi:[
+        {tarjeta:"Tarjeta Demo",desc:"Laptop de prueba",monto:1200,total:12,pago:5},
+        {tarjeta:"Tarjeta Demo",desc:"Audífonos fake",monto:300,total:6,pago:6,liquidado:true},
+        {tarjeta:"Banco Falso",desc:"Vuelo imaginario",monto:2500,total:5,pago:5,liquidado:true},
+        {tarjeta:"Tarjeta Demo",desc:"Mesa de prueba",monto:450,total:6,pago:1}
+      ],
+      deudaMama:[
+        {desc:"Tablet de prueba",monto:800,total:10,pago:7},
+        {desc:"Teléfono demo",monto:600,total:8,pago:8,liquidado:true}
+      ],
+      gasto:{
+        mama:[{fecha:k+"-06",desc:"Comida de prueba",monto:610},{fecha:k+"-15",desc:"Paseo demo",monto:380}],
+        yo:[{fecha:k+"-08",desc:"Suscripción falsa",monto:199},{fecha:k+"-17",desc:"Gasolina de prueba",monto:520}]
+      }
+    })
+  ];
+  return {
+    months, current:k,
+    config:{
+      minInv:23100, botUrl:"", botToken:"", savedBase:329000,
+      saldoAyer:saldoAyerDemo, saldoHoy:saldoHoyDemo, rendFecha:k+"-01",
+      avisoHora:9, notificationsEnabled:false, pushEnabled:false,
+      deudaFilter:"pendientes", collapsed:{},
+      q1Aq2:true, savedBaseAjustado:true, gastoMamaMigrado:true,
+      msiNov2026:true, rendSemanasMigrado:true, rendCompuestoMigrado:true, rendBaseNov22:true
+    },
+    user:{name:"Demo"}
+  };
+}
+
 let state = loadState();
 function loadState(){
+  if(DEMO) return demoSeedState();
   try{
     const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){ const s=JSON.parse(raw); if(s && s.months) return s; }
