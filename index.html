@@ -895,7 +895,8 @@ function demoSeedState(){
       avisoHora:9, notificationsEnabled:false, pushEnabled:false,
       deudaFilter:"pendientes", collapsed:{},
       q1Aq2:true, savedBaseAjustado:true, gastoMamaMigrado:true,
-      msiNov2026:true, rendSemanasMigrado:true, rendCompuestoMigrado:true, rendBaseNov22:true
+      msiNov2026:true, rendSemanasMigrado:true, rendCompuestoMigrado:true, rendBaseNov22:true,
+      aporteNov27:true, rendBaseNov27:true
     },
     user:{name:"Demo"}
   };
@@ -908,7 +909,7 @@ function loadState(){
     const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){ const s=JSON.parse(raw); if(s && s.months) return s; }
   }catch(e){}
-  return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:505472.30,deudaFilter:"pendientes",saldoAyer:505353.27,saldoHoy:505472.30,rendFecha:"2026-11-22"}, user:{name:"Yosseline"} };
+  return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:526953.06,deudaFilter:"pendientes",saldoAyer:526828.97,saldoHoy:526953.06,rendFecha:"2026-11-27"}, user:{name:"Yosseline"} };
 }
 function saveState(){
   // En demo nada se persiste: cada visita empieza limpia con los datos de prueba.
@@ -980,7 +981,7 @@ function normalizarInv(inv){
 // Guardamos la última observación real (saldo de ayer, saldo de hoy y su fecha).
 // Los saldos mostrados se derivan de ahí con interés compuesto, así que "ayer" y
 // "hoy" avanzan solos cada día sin volver a capturarlos.
-const SALDO_AYER_PREDET=505353.27, SALDO_HOY_PREDET=505472.30, REND_FECHA_PREDET="2026-11-22";
+const SALDO_AYER_PREDET=526828.97, SALDO_HOY_PREDET=526953.06, REND_FECHA_PREDET="2026-11-27";
 function rendBase(){
   const c=state.config||{};
   const ayer=Number(c.saldoAyer)>0?Number(c.saldoAyer):SALDO_AYER_PREDET;
@@ -3086,6 +3087,26 @@ function init(){
     state.months.forEach(m=>{ if(m.inversion) m.inversion.rendimiento=rendMensual(m); });
     recalibrarSaldoTotal(SALDO_HOY_PREDET);
     state.config.rendBaseNov22=true;
+  }
+  // Depósito del 27/11/2026: $21,008.82 se registran como aportación (q2), no
+  // como rendimiento, para conservar la tasa diaria. La nueva observación se
+  // captura con la misma tasa y el saldo total se recalibra a $526,953.06.
+  if(!state.config.aporteNov27){
+    const mm=state.months.find(x=>x.id==="2026-11")||syncMonth();
+    if(mm && mm.inversion){
+      mm.inversion.q2=Math.round(((Number(mm.inversion.q2)||0)+21008.82)*100)/100;
+      if(Array.isArray(mm.rendimientoSemanas)) mm.rendimientoSemanas=rendSemanasArray(mm);
+      mm.inversion.rendimiento=rendMensual(mm);
+    }
+    state.config.aporteNov27=true;
+  }
+  if(!state.config.rendBaseNov27){
+    state.config.saldoAyer=SALDO_AYER_PREDET;
+    state.config.saldoHoy=SALDO_HOY_PREDET;
+    state.config.rendFecha=REND_FECHA_PREDET;
+    state.months.forEach(m=>{ if(m.inversion) m.inversion.rendimiento=rendMensual(m); });
+    recalibrarSaldoTotal(SALDO_HOY_PREDET);
+    state.config.rendBaseNov27=true;
   }
   saveState();
   renderAll();
