@@ -2541,6 +2541,7 @@ async function syncToBot(silent){
     if(Array.isArray(m.msi)&&m.msi.length) payload.msi=m.msi;
     if(m.inversion && ((Number(m.inversion.q1)||0)+(Number(m.inversion.q2)||0)+rendMensual(m))>0) payload.inversion=normalizarInv({...m.inversion,rendimiento:rendMensual(m)});
     if(Array.isArray(m.rendimientoSemanas)&&m.rendimientoSemanas.length) payload.rendSemanas=m.rendimientoSemanas;
+    if(state.config && state.config.retirosIniciados) payload.retiros=Array.isArray(state.retiros)?state.retiros:[];
     const r=await fetch(url+"/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Auth-Token":token},body:JSON.stringify(payload)});
     if(!r.ok) throw new Error("HTTP "+r.status);
     state.config.lastSync=Date.now();
@@ -2688,6 +2689,17 @@ function applySharedConfigFromBot(s){
   if(Array.isArray(s.rendSemanas) && s.rendSemanas.length){
     const next=s.rendSemanas.map(x=>Number(x)||0);
     if(JSON.stringify(next)!==JSON.stringify(mm.rendimientoSemanas||[])){ mm.rendimientoSemanas=next; changes++; }
+  }
+  if(Array.isArray(s.retiros)){
+    const next=s.retiros.map(x=>({
+      id:String(x.id||uid()), fecha:String(x.fecha||""),
+      monto:Math.round((Number(x.monto)||0)*100)/100, motivo:String(x.motivo||"")
+    })).filter(x=>x.monto>0 && /^\d{4}-\d{2}-\d{2}$/.test(x.fecha));
+    if(JSON.stringify(next)!==JSON.stringify(state.retiros||[])){
+      state.retiros=next;
+      state.config.retirosIniciados=true;
+      changes++;
+    }
   }
   // Los saldos de la observación también viven en el bot. Así un dispositivo
   // con datos viejos (o que no corrió una migración) se pone al día al abrir.
