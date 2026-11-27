@@ -2592,6 +2592,24 @@ function applySharedConfigFromBot(s){
     const next=s.rendSemanas.map(x=>Number(x)||0);
     if(JSON.stringify(next)!==JSON.stringify(mm.rendimientoSemanas||[])){ mm.rendimientoSemanas=next; changes++; }
   }
+  // Los saldos de la observación también viven en el bot. Así un dispositivo
+  // con datos viejos (o que no corrió una migración) se pone al día al abrir.
+  let rendChange=false;
+  if(s.rendimiento){
+    const r=s.rendimiento;
+    const ayer=Number(r.saldoAyer)||0, hoy=Number(r.saldoHoy)||0;
+    const fecha=String(r.rendFecha||"");
+    if(ayer>0 && hoy>0 && /^\d{4}-\d{2}-\d{2}$/.test(fecha)){
+      if((Number(state.config.saldoAyer)||0)!==ayer){ state.config.saldoAyer=ayer; rendChange=true; }
+      if((Number(state.config.saldoHoy)||0)!==hoy){ state.config.saldoHoy=hoy; rendChange=true; }
+      if((state.config.rendFecha||"")!==fecha){ state.config.rendFecha=fecha; rendChange=true; }
+    }
+  }
+  if(rendChange){
+    state.months.forEach(m=>{ if(m.inversion) m.inversion.rendimiento=rendMensual(m); });
+    recalibrarSaldoTotal(state.config.saldoHoy);
+    changes++;
+  }
   if(s.avisoHora!=null){
     const h=Number(s.avisoHora);
     if(Number.isInteger(h)&&h>=0&&h<=23){
