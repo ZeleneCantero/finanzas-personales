@@ -1852,8 +1852,8 @@ function addAbono(){
 }
 // Un retiro baja el capital, no la tasa: se recalcula la observación con la
 // misma tasa y se recalibra el saldo base para que el total cuadre.
-function aplicarNuevoSaldo(nuevoHoy){
-  const tasa=rendTasa();
+function aplicarNuevoSaldo(nuevoHoy,delta){
+  const totalAntes=totalSaved(), tasa=rendTasa();
   // Marca el momento del cambio local: una sincronización que estaba en vuelo
   // con datos más viejos no debe revertir este saldo.
   state.config.saldosLocalTs=Date.now();
@@ -1862,7 +1862,7 @@ function aplicarNuevoSaldo(nuevoHoy){
   state.months.forEach(m=>{ if(m.inversion) m.inversion.rendimiento=rendMensual(m); });
   const cm=currentMonth();
   if(cm) cm.rendimientoSemanas=rendSemanasArray(cm);
-  recalibrarSaldoTotal(nuevoHoy);
+  recalibrarSaldoTotal(Math.round((totalAntes+delta)*100)/100);
 }
 function addRetiro(){
   const montoEl=document.getElementById("retiroMonto");
@@ -1879,7 +1879,7 @@ function addRetiro(){
   if(!Array.isArray(state.retiros)) state.retiros=[];
   state.retiros.push({id:uid(),fecha,monto,motivo});
   if(state.config) state.config.retirosIniciados=true;
-  aplicarNuevoSaldo(nuevoHoy);
+  aplicarNuevoSaldo(nuevoHoy,-monto);
   if(montoEl) montoEl.value="";
   if(motivoEl) motivoEl.value="";
   saveState(); renderAll();
@@ -1893,7 +1893,7 @@ function deleteRetiro(id){
   if(!confirm("¿Deshacer el retiro de $"+fmt(r.monto)+" ("+(r.motivo||"")+")?")) return;
   const nuevoHoy=Math.round((rendBase().hoy+(Number(r.monto)||0))*100)/100;
   state.retiros=state.retiros.filter(x=>x.id!==id);
-  aplicarNuevoSaldo(nuevoHoy);
+  aplicarNuevoSaldo(nuevoHoy,Number(r.monto)||0);
   saveState(); renderAll();
   toast("Retiro deshecho");
   syncToBot(true).catch(()=>{});
