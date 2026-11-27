@@ -3146,7 +3146,7 @@ function init(){
   setInterval(()=>{ if(document.visibilityState==="visible") checkNotifications(); },60000);
 }
 init();
-if("serviceWorker" in navigator && !DEMO){ navigator.serviceWorker.register("sw-v2.js?v=26").catch(()=>{}); }
+if("serviceWorker" in navigator && !DEMO){ navigator.serviceWorker.register("sw-v2.js?v=27",{updateViaCache:"none"}).catch(()=>{}); }
 </script>
 </body>
 </html>

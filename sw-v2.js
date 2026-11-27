@@ -1,4 +1,4 @@
-const CACHE = "finanzas-v26";
+const CACHE = "finanzas-v27";
 const ASSETS = [
   "./manifest.json",
   "./icon.svg",
@@ -36,7 +36,7 @@ self.addEventListener("fetch", (e) => {
 
   if (isHTML) {
     e.respondWith(
-      fetch(req)
+      fetch(req, { cache: "reload" })
         .then((res) => {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
