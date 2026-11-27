@@ -529,6 +529,17 @@
         <div style="font-size:12px;color:var(--muted);margin-top:6px">Se suma al ahorro de este mes y avanza la meta.</div>
       </div>
       <div class="card">
+        <h3>➖ Retirar del ahorro</h3>
+        <div class="grid2" style="margin-bottom:6px">
+          <input id="retiroMonto" type="number" inputmode="decimal" placeholder="Monto (ej: 5000)">
+          <input id="retiroFecha" type="date">
+        </div>
+        <input id="retiroMotivo" placeholder="Motivo (ej: emergencia médica)" style="margin-bottom:6px">
+        <button class="btn" onclick="addRetiro()">Registrar retiro</button>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">Baja el saldo del fondo sin cambiar la tasa de rendimiento.</div>
+        <div id="retirosList" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
         <h3>⏱️ Tiempo estimado</h3>
         <div style="font-size:13px" id="metaTiempo"></div>
       </div>
@@ -898,6 +909,7 @@ function demoSeedState(){
       msiNov2026:true, rendSemanasMigrado:true, rendCompuestoMigrado:true, rendBaseNov22:true,
       aporteNov27:true, rendBaseNov27:true
     },
+    retiros:[],
     user:{name:"Demo"}
   };
 }
@@ -907,9 +919,9 @@ function loadState(){
   if(DEMO) return demoSeedState();
   try{
     const raw=localStorage.getItem(STORAGE_KEY);
-    if(raw){ const s=JSON.parse(raw); if(s && s.months) return s; }
+    if(raw){ const s=JSON.parse(raw); if(s && s.months){ if(!Array.isArray(s.retiros)) s.retiros=[]; return s; } }
   }catch(e){}
-  return { months:seedMonths(), current:"2024-11", config:{minInv:23100,botUrl:"",botToken:"",savedBase:526953.06,deudaFilter:"pendientes",saldoAyer:526828.97,saldoHoy:526953.06,rendFecha:"2026-11-27"}, user:{name:"Yosseline"} };
+  return { months:seedMonths(), current:"2024-11", retiros:[], config:{minInv:23100,botUrl:"",botToken:"",savedBase:526953.06,deudaFilter:"pendientes",saldoAyer:526828.97,saldoHoy:526953.06,rendFecha:"2026-11-27"}, user:{name:"Yosseline"} };
 }
 function saveState(){
   // En demo nada se persiste: cada visita empieza limpia con los datos de prueba.
@@ -1113,7 +1125,7 @@ function scheduleUndoBot(key,fn){ cancelUndoBot(key); undoBotTimers[key]=setTime
 function cancelUndoBot(key){ if(undoBotTimers[key]){ clearTimeout(undoBotTimers[key]); delete undoBotTimers[key]; } }
 
 // ---------- RENDER ----------
-function renderAll(){ applyCollapsed(); renderMonthCalendars(); renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderCuentasMama(); renderInversion(); renderRendim(); renderSimulacion(); renderMeta(); renderMas(); renderAlerts(); }
+function renderAll(){ applyCollapsed(); renderMonthCalendars(); renderHeader(); renderSyncStatus(); renderResumen(); renderDeudas(); renderGastos(); renderCuentasMama(); renderInversion(); renderRendim(); renderSimulacion(); renderMeta(); renderRetiros(); renderMas(); renderAlerts(); }
 // Estado de desplegables compartido por Deudas y Gastos (migra el guard viejo).
 function collapsedStore(){
   if(!state.config) state.config={};
@@ -1837,6 +1849,91 @@ function addAbono(){
   saveState(); renderAll();
   toast("Abono de $"+fmt(v)+" registrado");
   syncToBot(true).catch(()=>{});
+}
+// Un retiro baja el capital, no la tasa: se recalcula la observación con la
+// misma tasa y se recalibra el saldo base para que el total cuadre.
+function aplicarNuevoSaldo(nuevoHoy){
+  const tasa=rendTasa();
+  // Marca el momento del cambio local: una sincronización que estaba en vuelo
+  // con datos más viejos no debe revertir este saldo.
+  state.config.saldosLocalTs=Date.now();
+  state.config.saldoHoy=nuevoHoy;
+  state.config.saldoAyer=Math.round((nuevoHoy/(1+tasa))*100)/100;
+  state.months.forEach(m=>{ if(m.inversion) m.inversion.rendimiento=rendMensual(m); });
+  const cm=currentMonth();
+  if(cm) cm.rendimientoSemanas=rendSemanasArray(cm);
+  recalibrarSaldoTotal(nuevoHoy);
+}
+function addRetiro(){
+  const montoEl=document.getElementById("retiroMonto");
+  const fechaEl=document.getElementById("retiroFecha");
+  const motivoEl=document.getElementById("retiroMotivo");
+  const monto=Math.round((parseFloat(montoEl&&montoEl.value)||0)*100)/100;
+  const fecha=String((fechaEl&&fechaEl.value)||"").trim();
+  const motivo=String((motivoEl&&motivoEl.value)||"").trim();
+  if(!(monto>0)){ toast("Monto inválido"); return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ toast("Elige la fecha del retiro"); return; }
+  if(!motivo){ toast("Escribe el motivo del retiro"); return; }
+  const nuevoHoy=Math.round((rendBase().hoy-monto)*100)/100;
+  if(nuevoHoy<=0){ toast("El retiro supera el saldo disponible"); return; }
+  if(!Array.isArray(state.retiros)) state.retiros=[];
+  state.retiros.push({id:uid(),fecha,monto,motivo});
+  if(state.config) state.config.retirosIniciados=true;
+  aplicarNuevoSaldo(nuevoHoy);
+  if(montoEl) montoEl.value="";
+  if(motivoEl) motivoEl.value="";
+  saveState(); renderAll();
+  toast("Retiro de $"+fmt(monto)+" registrado");
+  syncToBot(true).catch(()=>{});
+}
+function deleteRetiro(id){
+  if(!Array.isArray(state.retiros)) return;
+  const r=state.retiros.find(x=>x.id===id);
+  if(!r) return;
+  if(!confirm("¿Deshacer el retiro de $"+fmt(r.monto)+" ("+(r.motivo||"")+")?")) return;
+  const nuevoHoy=Math.round((rendBase().hoy+(Number(r.monto)||0))*100)/100;
+  state.retiros=state.retiros.filter(x=>x.id!==id);
+  aplicarNuevoSaldo(nuevoHoy);
+  saveState(); renderAll();
+  toast("Retiro deshecho");
+  syncToBot(true).catch(()=>{});
+}
+function renderRetiros(){
+  const el=document.getElementById("retirosList"); if(!el) return;
+  const fechaEl=document.getElementById("retiroFecha");
+  if(fechaEl && !fechaEl.value) fechaEl.value=todayKey();
+  const arr=Array.isArray(state.retiros)?state.retiros:[];
+  el.innerHTML="";
+  if(!arr.length){
+    const empty=document.createElement("div");
+    empty.style.cssText="font-size:12px;color:var(--muted)";
+    empty.textContent="Sin retiros registrados.";
+    el.appendChild(empty);
+    return;
+  }
+  arr.slice().sort((a,b)=>String(b.fecha||"").localeCompare(String(a.fecha||""))).forEach(r=>{
+    const row=document.createElement("div");
+    row.style.cssText="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)";
+    const info=document.createElement("div");
+    info.style.cssText="flex:1;min-width:0";
+    const vals=document.createElement("div");
+    const amount=document.createElement("b");
+    amount.style.color="var(--red)";
+    amount.textContent="−$"+fmt(r.monto);
+    const date=document.createElement("span");
+    date.style.cssText="font-size:11px;color:var(--muted);margin-left:6px";
+    date.textContent=r.fecha||"";
+    vals.appendChild(amount); vals.appendChild(date);
+    const motivo=document.createElement("div");
+    motivo.style.cssText="font-size:12px;overflow:hidden;text-overflow:ellipsis";
+    motivo.textContent=r.motivo||"";
+    info.appendChild(vals); info.appendChild(motivo);
+    const btn=document.createElement("button");
+    btn.className="btn btn-ghost btn-sm"; btn.textContent="Deshacer";
+    btn.onclick=()=>deleteRetiro(r.id);
+    row.appendChild(info); row.appendChild(btn);
+    el.appendChild(row);
+  });
 }
 function setBudget(who,v){
   const m=currentMonth();
@@ -2599,7 +2696,9 @@ function applySharedConfigFromBot(s){
     const r=s.rendimiento;
     const ayer=Number(r.saldoAyer)||0, hoy=Number(r.saldoHoy)||0;
     const fecha=String(r.rendFecha||"");
-    if(ayer>0 && hoy>0 && /^\d{4}-\d{2}-\d{2}$/.test(fecha)){
+    const synced=Date.parse(r.syncedAt||"")||0;
+    const localTs=Number(state.config.saldosLocalTs)||0;
+    if(synced>localTs && ayer>0 && hoy>0 && /^\d{4}-\d{2}-\d{2}$/.test(fecha)){
       if((Number(state.config.saldoAyer)||0)!==ayer){ state.config.saldoAyer=ayer; rendChange=true; }
       if((Number(state.config.saldoHoy)||0)!==hoy){ state.config.saldoHoy=hoy; rendChange=true; }
       if((state.config.rendFecha||"")!==fecha){ state.config.rendFecha=fecha; rendChange=true; }
